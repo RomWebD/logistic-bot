@@ -1,0 +1,40 @@
+venv/
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environment
+venv/
+.env
+*.env
+
+# macOS
+.DS_Store
+
+# VSCode
+.vscode/
+
+# Logs
+*.log
+
+# SQLite
+*.sqlite3
+*.db
+
+# Byte-compiled / cache
+*.pyc
+__pycache__/
+
+# Pytest cache
+.pytest_cache/
+
+# MyPy
+.mypy_cache/
+
+# Jupyter
+.ipynb_checkpoints
+
+# AI/Generated/IDE
+.idea/
