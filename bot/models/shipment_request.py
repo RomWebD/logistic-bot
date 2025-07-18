@@ -14,8 +14,11 @@ class Shipment_request(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     client_telegram_id: Mapped[int] = mapped_column(unique=True, index=True)
-    route: Mapped[str] = mapped_column(String)
+    from_city: Mapped[str] = mapped_column(String)
+    to_city: Mapped[str] = mapped_column(String)
+
     date: Mapped[datetime] = mapped_column(DateTime)
+    date_text: Mapped[str] = mapped_column(String)
     cargo_type: Mapped[str] = mapped_column(String)
     volume: Mapped[str] = mapped_column(String)
     weight: Mapped[str] = mapped_column(String)

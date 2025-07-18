@@ -7,12 +7,14 @@ from aiogram.fsm.context import FSMContext
 from bot.database.database import async_session
 from bot.models.shipment_request import Shipment_request
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from bot.services.notifier import notify_carriers
 
 router = Router()
 
 
 class ClientApplicationFSM(StatesGroup):
-    route = State()
+    from_city = State()
+    to_city = State()
     date = State()
     cargo_type = State()
     volume = State()
@@ -42,14 +44,25 @@ async def start_client_application(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "confirm_start_application")
 async def confirm_start_application(callback: CallbackQuery, state: FSMContext):
-    await callback.message.answer("📍 Введіть маршрут (наприклад: Київ → Львів):")
-    await state.set_state(ClientApplicationFSM.route)
+    await callback.message.answer(
+        "🚚 Звідки потрібно забрати вантаж?\n\nВведіть місто відправлення (наприклад: Київ):"
+    )
+    await state.set_state(ClientApplicationFSM.from_city)
     await callback.answer()
 
 
-@router.message(ClientApplicationFSM.route)
-async def get_route(message: Message, state: FSMContext):
-    await state.update_data(route=message.text)
+@router.message(ClientApplicationFSM.from_city)
+async def get_from_route(message: Message, state: FSMContext):
+    await state.update_data(from_city=message.text)
+    await message.answer(
+        "🏁 Куди потрібно доставити вантаж?\n\nВведіть місто призначення (наприклад: Львів):"
+    )
+    await state.set_state(ClientApplicationFSM.to_city)
+
+
+@router.message(ClientApplicationFSM.to_city)
+async def get_to_route(message: Message, state: FSMContext):
+    await state.update_data(to_city=message.text)
     await message.answer("📅 Введіть дату подачі (наприклад: 20 липня до 10:00):")
     await state.set_state(ClientApplicationFSM.date)
 
@@ -100,53 +113,31 @@ async def get_unloading(message: Message, state: FSMContext):
 
 @router.message(ClientApplicationFSM.price)
 async def finish_application(message: Message, state: FSMContext):
+    await state.update_data(price=message.text.strip())
     data = await state.get_data()
-    telegram_id = message.from_user.id
-    price = message.text.strip()
-
-    new_request = Shipment_request(
-        client_telegram_id=telegram_id,
-        route=data["route"],
-        date=data["date"],
-        cargo_type=data["cargo_type"],
-        volume=data["volume"],
-        weight=data["weight"],
-        loading=data["loading"],
-        unloading=data["unloading"],
-        price=price,
-    )
-
-    async with async_session() as session:
-        session.add(new_request)
-        await session.commit()
-        await session.refresh(new_request)
 
     await message.answer(
-        f"""📦 <b>Нова заявка на перевезення:</b>
-Маршрут: {data["route"]}
+        f"""📦 <b>Перевірте дані заявки:</b>
+Маршрут: {data["from_city"]} → {data["to_city"]}
 Дата подачі: {data["date"]}
 Тип вантажу: {data["cargo_type"]}
 Обʼєм: {data["volume"]}
 Орієнтовна вага: {data["weight"]}
 Завантаження: {data["loading"]}
 Вивантаження: {data["unloading"]}
-Ціна: {price} грн""",
+Ціна: {data["price"]} грн
+
+Все вірно?""",
         reply_markup=InlineKeyboardMarkup(
             inline_keyboard=[
                 [
                     InlineKeyboardButton(
-                        text="✅ Прийняти рейс",
-                        callback_data=f"accept_{new_request.id}",
-                    ),
-                    InlineKeyboardButton(
-                        text="❌ Відмовитись",
-                        callback_data=f"decline_{new_request.id}",
-                    ),
+                        text="✅ Підтвердити заявку", callback_data="confirm_shipment"
+                    )
                 ],
                 [
                     InlineKeyboardButton(
-                        text="💬 Запропонувати іншу ставку",
-                        callback_data=f"negotiate_{new_request.id}",
+                        text="❌ Скасувати", callback_data="cancel_shipment"
                     )
                 ],
             ]
@@ -154,7 +145,68 @@ async def finish_application(message: Message, state: FSMContext):
         parse_mode="HTML",
     )
 
+
+@router.callback_query(F.data == "confirm_shipment")
+async def confirm_shipment(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    telegram_id = callback.from_user.id
+    new_request = Shipment_request(
+        client_telegram_id=telegram_id,
+        from_city=data["from_city"],
+        to_city=data["to_city"],
+        date=data["date"],
+        date_text=data["date"],
+        cargo_type=data["cargo_type"],
+        volume=data["volume"],
+        weight=data["weight"],
+        loading=data["loading"],
+        unloading=data["unloading"],
+        price=data["price"],
+    )
+
+    async with async_session() as session:
+        session.add(new_request)
+        await session.commit()
+        await session.refresh(new_request)
+        await callback.message.edit_text("✅ Заявку створено успішно!")
+
+    #     await message.answer(
+    #         f"""📦 <b>Нова заявка на перевезення:</b>
+    # Маршрут: {data["route"]}
+    # Дата подачі: {data["date"]}
+    # Тип вантажу: {data["cargo_type"]}
+    # Обʼєм: {data["volume"]}
+    # Орієнтовна вага: {data["weight"]}
+    # Завантаження: {data["loading"]}
+    # Вивантаження: {data["unloading"]}
+    # Ціна: {price} грн""",
+    # reply_markup=InlineKeyboardMarkup(
+    #     inline_keyboard=[
+    #         [
+    #             InlineKeyboardButton(
+    #                 text="✅ Прийняти рейс",
+    #                 callback_data=f"accept_{new_request.id}",
+    #             ),
+    #             InlineKeyboardButton(
+    #                 text="❌ Відмовитись",
+    #                 callback_data=f"decline_{new_request.id}",
+    #             ),
+    #         ],
+    #         [
+    #             InlineKeyboardButton(
+    #                 text="💬 Запропонувати іншу ставку",
+    #                 callback_data=f"negotiate_{new_request.id}",
+    #             )
+    #         ],
+    #     ]
+    # ),
+    #     parse_mode="HTML",
+    # )
+
+    await notify_carriers(bot=callback.bot, request=new_request)
+
     await state.clear()
+    await callback.answer()
 
 
 @router.callback_query(F.data == "cancel_application")

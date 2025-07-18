@@ -13,5 +13,6 @@ class Carrier(Base):
     telegram_id: Mapped[int] = mapped_column(unique=True, index=True)
     full_name: Mapped[str] = mapped_column(String(255))
     phone: Mapped[str] = mapped_column(String(50))
-    route: Mapped[str] = mapped_column(String(255))
+    from_city: Mapped[str] = mapped_column(String)
+    to_city: Mapped[str] = mapped_column(String)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())

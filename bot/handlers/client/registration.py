@@ -19,7 +19,36 @@ class RegisterClient(StatesGroup):
 
 @router.callback_query(F.data == "role_client")
 async def start_client_registration(callback: CallbackQuery, state: FSMContext):
-    await callback.message.answer("👋 Вітаємо! Введіть ваше ПІБ:")
+    telegram_id = callback.from_user.id
+
+    async with async_session() as session:
+        existing = await session.scalar(
+            select(Client).where(Client.telegram_id == telegram_id)
+        )
+
+    if existing:
+        await callback.message.answer(
+            "✅ Ви вже зареєстровані як клієнт.",
+            reply_markup=InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [
+                        InlineKeyboardButton(
+                            text="📦 Створити заявку",
+                            callback_data="client_application",
+                        )
+                    ]
+                ]
+            ),
+        )
+        await callback.answer()
+        return
+
+    await callback.message.answer(
+        "📦 Ви обрали роль *Клієнта*.\n\n"
+        "Перед тим, як створювати заявки, потрібно пройти коротку реєстрацію.\n\n"
+        "👤 Введіть ваше ПІБ:",
+        parse_mode="Markdown",
+    )
     await state.set_state(RegisterClient.full_name)
     await callback.answer()
 
