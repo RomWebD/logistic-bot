@@ -6,7 +6,7 @@ import asyncio
 import sentry_sdk
 from aiogram.client.default import DefaultBotProperties
 from bot.handlers.common import role_selection  # 👈 нове
-from bot.handlers.carrier import registration as carrier_registration   # 👈 нове
+from bot.handlers.carrier_company import registration as carrier_registration   # 👈 нове
 from bot.handlers.client import registration as client_registration   # 👈 нове
 from bot.handlers.client import application    # 👈 нове
 
