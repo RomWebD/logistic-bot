@@ -1,10 +1,16 @@
 from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import (
+    Message,
+    CallbackQuery,
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
+)
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 from sqlalchemy import select
 from bot.models.carrier_company import CarrierCompany
 from bot.database.database import async_session
+from bot.services.bot_commands import set_verified_carrier_menu
 
 router = Router()
 
@@ -22,7 +28,9 @@ class RegisterCarrierCompany(StatesGroup):
 
 @router.callback_query(F.data == "role_carrier")
 async def handle_role_carrier(callback: CallbackQuery, state: FSMContext):
-    await callback.message.answer("👋 Розпочнемо реєстрацію компанії-перевізника.\n\nВведіть ПІБ контактної особи:")
+    await callback.message.answer(
+        "👋 Розпочнемо реєстрацію компанії-перевізника.\n\nВведіть ПІБ контактної особи:"
+    )
     await state.set_state(RegisterCarrierCompany.contact_full_name)
     await callback.answer()
 
@@ -90,6 +98,7 @@ async def finish_company_registration(message: Message, state: FSMContext):
         else:
             session.add(
                 CarrierCompany(
+                    telegram_id=telegram_id,
                     contact_full_name=data["contact_full_name"],
                     company_name=data["company_name"],
                     ownership_type=data["ownership_type"],
@@ -102,14 +111,27 @@ async def finish_company_registration(message: Message, state: FSMContext):
             )
             await session.commit()
 
+            from bot.services.loader import bot
+
+            await set_verified_carrier_menu(bot, telegram_id)
+
+            # commands = [
+            #     BotCommand(command="menu", description="📋 Меню перевізника"),
+            #     BotCommand(command="start", description="🔄 Почати / перезапустити"),
+            # ]
+            # await bot.set_my_commands(
+            #     commands, scope=BotCommandScopeChat(chat_id=telegram_id)
+            # )
+            # await bot.set_chat_menu_button(
+            #     chat_id=telegram_id, menu_button=MenuButtonCommands()
+            # )
             await message.answer(
                 "✅ Реєстрація компанії успішна!",
                 reply_markup=InlineKeyboardMarkup(
                     inline_keyboard=[
                         [
                             InlineKeyboardButton(
-                                text="➕ Додати водія",
-                                callback_data="add_driver"
+                                text="➕ Додати водія", callback_data="add_driver"
                             )
                         ]
                     ]

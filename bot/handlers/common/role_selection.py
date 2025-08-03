@@ -15,6 +15,7 @@ role_keyboard = InlineKeyboardMarkup(
 
 @router.message(F.text == "/start")
 async def welcome_handler(message: Message):
+    
     await message.answer(
         "👋 Вас вітає Logisterium Bot!\n\nБудь ласка, виберіть вашу роль:",
         reply_markup=role_keyboard,

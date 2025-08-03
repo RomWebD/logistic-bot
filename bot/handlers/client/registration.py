@@ -81,6 +81,7 @@ async def get_client_phone(message: Message, state: FSMContext):
                 )
             )
             await session.commit()
+            
             await message.answer(
                 "✅ Реєстрація клієнта успішна!",
                 reply_markup=InlineKeyboardMarkup(
