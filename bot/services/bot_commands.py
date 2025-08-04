@@ -3,8 +3,6 @@ from aiogram.types import (
     BotCommand,
     BotCommandScopeChat,
     MenuButtonCommands,
-    MenuButtonDefault,
-    BotCommandScopeDefault,
 )
 from bot.database.database import async_session
 from sqlalchemy import select
@@ -32,8 +30,7 @@ async def remove_menu_for_all(bot: Bot):
         ids = result.all()
 
     for user_id in ids:
-        try:            
+        try:
             await bot.set_my_commands([], scope=BotCommandScopeChat(chat_id=user_id))
-            # await bot.set_chat_menu_button(chat_id=user_id, menu_button=MenuButtonDefault())
         except Exception as e:
             print(f"❌ Не вдалося видалити меню для {user_id}: {e}")

@@ -11,6 +11,10 @@ from sqlalchemy import select
 from bot.models.carrier_company import CarrierCompany
 from bot.database.database import async_session
 from bot.services.bot_commands import set_verified_carrier_menu
+from bot.services.verification import (
+    delete_carrier_by_telegram_id,
+    get_carrier_by_telegram_id,
+)
 
 router = Router()
 
@@ -26,8 +30,41 @@ class RegisterCarrierCompany(StatesGroup):
     website = State()
 
 
+@router.callback_query(F.data == "delete_carrier_profile")
+async def delete_carrier_profile(callback: CallbackQuery, state: FSMContext):
+    telegram_id = callback.from_user.id
+
+    await delete_carrier_by_telegram_id(telegram_id=telegram_id, callback=callback)
+    await handle_role_carrier(callback, state)
+    await callback.answer()
+
+
 @router.callback_query(F.data == "role_carrier")
 async def handle_role_carrier(callback: CallbackQuery, state: FSMContext):
+    telegram_id = callback.from_user.id
+    carrier = await get_carrier_by_telegram_id(telegram_id)
+
+    if carrier:
+        await callback.message.answer(
+            "⚠️ Ви вже зареєстровані як перевізник.\nЩо бажаєте зробити?",
+            reply_markup=InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [
+                        InlineKeyboardButton(
+                            text="📂 Перейти до меню", callback_data="open_carrier_menu"
+                        )
+                    ],
+                    [
+                        InlineKeyboardButton(
+                            text="❌ Видалити профіль",
+                            callback_data="delete_carrier_profile",
+                        )
+                    ],
+                ]
+            ),
+        )
+        await callback.answer()
+        return
     await callback.message.answer(
         "👋 Розпочнемо реєстрацію компанії-перевізника.\n\nВведіть ПІБ контактної особи:"
     )
@@ -115,16 +152,6 @@ async def finish_company_registration(message: Message, state: FSMContext):
 
             await set_verified_carrier_menu(bot, telegram_id)
 
-            # commands = [
-            #     BotCommand(command="menu", description="📋 Меню перевізника"),
-            #     BotCommand(command="start", description="🔄 Почати / перезапустити"),
-            # ]
-            # await bot.set_my_commands(
-            #     commands, scope=BotCommandScopeChat(chat_id=telegram_id)
-            # )
-            # await bot.set_chat_menu_button(
-            #     chat_id=telegram_id, menu_button=MenuButtonCommands()
-            # )
             await message.answer(
                 "✅ Реєстрація компанії успішна!",
                 reply_markup=InlineKeyboardMarkup(
