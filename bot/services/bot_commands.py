@@ -7,6 +7,7 @@ from aiogram.types import (
 from bot.database.database import async_session
 from sqlalchemy import select
 from bot.models.carrier_company import CarrierCompany
+from aiogram.types import ReplyKeyboardRemove
 
 
 async def set_verified_carrier_menu(bot: Bot, chat_id: int):
@@ -32,5 +33,8 @@ async def remove_menu_for_all(bot: Bot):
     for user_id in ids:
         try:
             await bot.set_my_commands([], scope=BotCommandScopeChat(chat_id=user_id))
+            # await bot.send_message(
+            #     user_id, "Меню приховано", reply_markup=ReplyKeyboardRemove()
+            # )
         except Exception as e:
             print(f"❌ Не вдалося видалити меню для {user_id}: {e}")

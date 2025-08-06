@@ -3,6 +3,7 @@ from aiogram.types import (
     Message,
     InlineKeyboardMarkup,
     InlineKeyboardButton,
+    CallbackQuery,
     WebAppInfo,
 )
 from aiogram.filters import Command
@@ -44,9 +45,17 @@ vehicle_webapp_markup = InlineKeyboardMarkup(
         [
             InlineKeyboardButton(
                 text="Відкрити автопарк",
-                web_app=WebAppInfo(url="https://docs.google.com/spreadsheets/d/1-JthBRgXotzuJIZUxY-8jwDfwhtDUcicnfm5OtZYAXk/edit?usp=sharing"),  # або твій WebApp
+                web_app=WebAppInfo(
+                    url="https://docs.google.com/spreadsheets/d/1-JthBRgXotzuJIZUxY-8jwDfwhtDUcicnfm5OtZYAXk/edit?usp=sharing"
+                ),  # або твій WebApp
             )
-        ]
+        ],
+        [
+            InlineKeyboardButton(
+                text="➕ Добавити транспорт",
+                callback_data="carrier_add_new_car",  # або твій WebApp
+            ),
+        ],
     ]
 )
 
@@ -75,6 +84,8 @@ carrier_menu_keyboard = ReplyKeyboardMarkup(
     input_field_placeholder="Оберіть опцію",
     one_time_keyboard=False,  # ❗️це важливо — меню не зникає після натискання
 )
+
+
 # carrier_menu_keyboard = InlineKeyboardMarkup(
 #     inline_keyboard=[
 #         [InlineKeyboardButton(text="🚚 Мої транспортні засоби", callback_data="carrier_vehicles"),
@@ -85,10 +96,18 @@ carrier_menu_keyboard = ReplyKeyboardMarkup(
 #         [InlineKeyboardButton(text="💳 Фінанси (скоро)", callback_data="carrier_finance_disabled")],
 #     ]
 # )
+async def show_carrier_menu(message: Message):
+    await message.answer("📂 Меню перевізника:", reply_markup=carrier_menu_keyboard)
 
 
-# @router.callback_query(F.data == "open_carrier_menu")
 @router.message(Command("menu"))
 @require_verified_carrier()
 async def handle_menu_command(message: Message):
-    await message.answer("📂 Меню перевізника:", reply_markup=carrier_menu_keyboard)
+    await show_carrier_menu(message)
+
+
+@router.callback_query(F.data == "menu")
+@require_verified_carrier()
+async def handle_menu_callback(callback: CallbackQuery):
+    await callback.answer()
+    await show_carrier_menu(callback.message)

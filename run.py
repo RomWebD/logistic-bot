@@ -9,7 +9,7 @@ async def init_db():
 
 
 async def run():
-    await init_db()
+    # await init_db()
     await bot_main()
 
 

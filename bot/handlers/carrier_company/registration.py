@@ -51,7 +51,7 @@ async def handle_role_carrier(callback: CallbackQuery, state: FSMContext):
                 inline_keyboard=[
                     [
                         InlineKeyboardButton(
-                            text="📂 Перейти до меню", callback_data="open_carrier_menu"
+                            text="📂 Перейти до меню", callback_data="menu"
                         )
                     ],
                     [
