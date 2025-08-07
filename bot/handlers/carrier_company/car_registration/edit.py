@@ -17,6 +17,7 @@ EDIT_CALLBACK_PREFIX = "edit_"
 @router.callback_query(F.data == "car_edit")
 async def edit_car(callback: CallbackQuery, state: FSMContext):
     # Генеруємо кнопки для вибору кількох полів
+    
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [

@@ -19,22 +19,20 @@ def normalize_date_with_groq(input_text: str) -> datetime | None:
 ❗ Якщо рік або час не вказані — постав найближчі значення в майбутньому.
 Поверни лише результат, без коментарів.
 """
-
-    response = client.chat.completions.create(
-        messages=[{"role": "user", "content": prompt}],
-        model="llama-3.3-70b-versatile",
-        stream=False,
-    )
-
-    raw_output = response.choices[0].message.content.strip()
-
     try:
+        response = client.chat.completions.create(
+            messages=[{"role": "user", "content": prompt}],
+            model="llama-3.3-70b-versatile",
+            stream=False,
+        )
+
+        raw_output = response.choices[0].message.content.strip()
         print(datetime.strptime(raw_output, "%Y-%m-%d %H:%M"))
         return datetime.strptime(raw_output, "%Y-%m-%d %H:%M")
     except ValueError:
         print(f"⛔️ Не вдалося розпарсити дату: {raw_output}")
         return None
 
+    except Exception as err:
+        print(err)
 
-test_data = "20 липня до 10:00"
-normalize_date_with_groq(test_data)

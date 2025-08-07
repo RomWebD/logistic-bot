@@ -2,14 +2,14 @@
 
 import asyncio
 import datetime
-from bot.models.shipment_request import ShipmentRequest
+from bot.models.shipment_request import Shipment_request
 from bot.database.database import async_session
 from bot.services.notifier import notify_carriers
 from bot.main import bot  # якщо бот вже створений
 
 
 async def main():
-    fake = ShipmentRequest(
+    fake = Shipment_request(
         route="Київ → Львів",
         date=datetime(2025, 7, 20, 10, 0),
         cargo_type="Побутова техніка, упакована на палетах",

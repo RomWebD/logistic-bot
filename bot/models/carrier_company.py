@@ -1,8 +1,11 @@
 # bot/models/carrier_company.py
 
 from sqlalchemy import String, Boolean, BigInteger
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from bot.database.database import Base
+from typing import List
+
+from bot.models.TransportVehicle import TransportVehicle
 
 
 class CarrierCompany(Base):
@@ -10,7 +13,11 @@ class CarrierCompany(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     telegram_id: Mapped[int] = mapped_column(
-        BigInteger(), nullable=False, unique=True, index=True, comment="Telegram ID користувача"
+        BigInteger(),
+        nullable=False,
+        unique=True,
+        index=True,
+        comment="Telegram ID користувача",
     )
     is_verify: Mapped[bool] = mapped_column(Boolean(), default=False)
 
@@ -40,4 +47,7 @@ class CarrierCompany(Base):
     )
     website: Mapped[str] = mapped_column(
         String(255), nullable=True, comment="Посилання на веб‑сайт (необов’язково)"
+    )
+    vehicles: Mapped[List[TransportVehicle]] = relationship(
+        back_populates="carrier_company", cascade="all, delete-orphan"
     )

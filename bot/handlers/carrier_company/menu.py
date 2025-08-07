@@ -10,34 +10,12 @@ from aiogram.filters import Command
 from bot.decorators.access import require_verified_carrier
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
+from bot.handlers.carrier_company.car_registration.fsm_helpers import (
+    deactivate_inline_keyboard,
+)
+
 router = Router()
 
-# carrier_menu_keyboard = InlineKeyboardMarkup(
-#     inline_keyboard=[
-#         [
-#             InlineKeyboardButton(
-#                 text="🚚 Мої транспортні засоби", callback_data="carrier_vehicles"
-#             )
-#         ],
-#         [InlineKeyboardButton(text="📋 Мої заявки", callback_data="carrier_orders")],
-#         [
-#             InlineKeyboardButton(
-#                 text="🔎 Пошук рейсів", callback_data="carrier_search_routes"
-#             )
-#         ],
-#         [
-#             InlineKeyboardButton(
-#                 text="⚙️ Налаштування профілю", callback_data="carrier_settings"
-#             )
-#         ],
-#         [InlineKeyboardButton(text="🆘 Підтримка", callback_data="carrier_support")],
-#         [
-#             InlineKeyboardButton(
-#                 text="💳 Фінанси (скоро)", callback_data="carrier_finance_disabled"
-#             )
-#         ],
-#     ]
-# )
 
 # Вебапп-кнопка
 vehicle_webapp_markup = InlineKeyboardMarkup(
@@ -86,18 +64,29 @@ carrier_menu_keyboard = ReplyKeyboardMarkup(
 )
 
 
-# carrier_menu_keyboard = InlineKeyboardMarkup(
-#     inline_keyboard=[
-#         [InlineKeyboardButton(text="🚚 Мої транспортні засоби", callback_data="carrier_vehicles"),
-#         InlineKeyboardButton(text="📋 Мої заявки", callback_data="carrier_orders"),
-#         InlineKeyboardButton(text="🔎 Пошук рейсів", callback_data="carrier_search_routes")],
-#         [InlineKeyboardButton(text="⚙️ Налаштування профілю", callback_data="carrier_settings")],
-#         [InlineKeyboardButton(text="🆘 Підтримка", callback_data="carrier_support")],
-#         [InlineKeyboardButton(text="💳 Фінанси (скоро)", callback_data="carrier_finance_disabled")],
-#     ]
-# )
-async def show_carrier_menu(message: Message):
-    await message.answer("📂 Меню перевізника:", reply_markup=carrier_menu_keyboard)
+async def show_carrier_menu(target: Message | CallbackQuery):
+    text = "📁 Ви в головному меню перевізника.\n\n Будь ласка, скористайтесь кнопками нижче для подальших дій."
+
+    if isinstance(target, CallbackQuery):
+        await target.answer()
+
+        try:
+            await target.message.delete()
+        except Exception:
+            pass  # на випадок якщо повідомлення вже видалено
+        await target.message.answer(
+            reply_markup=carrier_menu_keyboard,
+            # text="\u2063",
+            text=text,
+            parse_mode="HTML",
+        )
+    else:
+        await target.answer(
+            text=text,
+            # text="\u2063",
+            reply_markup=carrier_menu_keyboard,
+            parse_mode="HTML",
+        )
 
 
 @router.message(Command("menu"))
@@ -110,4 +99,5 @@ async def handle_menu_command(message: Message):
 @require_verified_carrier()
 async def handle_menu_callback(callback: CallbackQuery):
     await callback.answer()
+    await deactivate_inline_keyboard(callback.message)
     await show_carrier_menu(callback.message)

@@ -158,3 +158,10 @@ async def safe_edit_text(
     except Exception as e:
         if "message is not modified" not in str(e).lower():
             raise
+
+
+async def deactivate_inline_keyboard(message: Message):
+    try:
+        await message.edit_reply_markup(reply_markup=None)
+    except Exception:
+        pass  # може впасти, якщо клавіатура вже видалена
