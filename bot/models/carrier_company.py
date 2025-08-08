@@ -31,7 +31,12 @@ class CarrierCompany(Base):
     email: Mapped[str] = mapped_column(
         String(255), nullable=False, comment="Електронна пошта"
     )
-
+    google_sheet_url: Mapped[str] = mapped_column(
+        String(512), nullable=True, comment="URL до Google Sheets із автопарком"
+    )
+    google_sheet_id: Mapped[str] = mapped_column(
+        String(512), nullable=True, comment="URL до Google Sheets із автопарком"
+    )
     # 🏢 Компанія
     company_name: Mapped[str] = mapped_column(
         String(255), nullable=False, comment="Назва компанії або ФОП"

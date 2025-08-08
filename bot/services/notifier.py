@@ -2,7 +2,7 @@
 
 from aiogram import Bot
 from sqlalchemy import select
-from bot.models import Carrier
+from bot.models import CarrierCompany
 from bot.models.shipment_request import Shipment_request
 from bot.database.database import async_session
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
@@ -11,7 +11,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 async def notify_carriers(bot: Bot, request: Shipment_request):
     async with async_session() as session:
         carriers = await session.scalars(
-            select(Carrier).where(Carrier.from_city == request.from_city)
+            select(CarrierCompany).where(CarrierCompany.from_city == request.from_city)
         )
 
         for carrier in carriers:

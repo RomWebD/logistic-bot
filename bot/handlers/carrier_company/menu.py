@@ -10,6 +10,7 @@ from aiogram.filters import Command
 from bot.decorators.access import require_verified_carrier
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
+from bot.handlers.carrier_company import crud
 from bot.handlers.carrier_company.car_registration.fsm_helpers import (
     deactivate_inline_keyboard,
 )
@@ -17,33 +18,42 @@ from bot.handlers.carrier_company.car_registration.fsm_helpers import (
 router = Router()
 
 
-# Вебапп-кнопка
-vehicle_webapp_markup = InlineKeyboardMarkup(
-    inline_keyboard=[
-        [
-            InlineKeyboardButton(
-                text="Відкрити автопарк",
-                web_app=WebAppInfo(
-                    url="https://docs.google.com/spreadsheets/d/1-JthBRgXotzuJIZUxY-8jwDfwhtDUcicnfm5OtZYAXk/edit?usp=sharing"
-                ),  # або твій WebApp
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                text="➕ Добавити транспорт",
-                callback_data="carrier_add_new_car",  # або твій WebApp
-            ),
-        ],
-    ]
-)
-
-
 # Обробка натискання текстової кнопки з ReplyKeyboardMarkup
+# @router.message(F.text == "🚚 Мої транспортні засоби")
+# async def handle_vehicles_button(message: Message):
+#     await message.answer(
+#         "🔗 Натисніть кнопку нижче, щоб переглянути ваш автопарк:",
+#         reply_markup=vehicle_webapp_markup,
+#     )
 @router.message(F.text == "🚚 Мої транспортні засоби")
 async def handle_vehicles_button(message: Message):
+    telegram_id = message.from_user.id
+    sheet_url = await crud.get_sheet_url_by_telegram_id(telegram_id)
+
+    if not sheet_url:
+        await message.answer("⛔️ Немає Google Sheets URL для компанії.")
+        return
+
+    inline_keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="Відкрити автопарк",
+                    web_app=WebAppInfo(url=sheet_url),
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="➕ Добавити транспорт",
+                    callback_data="carrier_add_new_car",
+                ),
+            ],
+        ]
+    )
+
     await message.answer(
         "🔗 Натисніть кнопку нижче, щоб переглянути ваш автопарк:",
-        reply_markup=vehicle_webapp_markup,
+        reply_markup=inline_keyboard,
     )
 
 

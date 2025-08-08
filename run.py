@@ -1,6 +1,7 @@
 import asyncio
 from bot.main import main as bot_main
 from bot.database.database import engine, Base
+import bot.models
 
 
 async def init_db():
@@ -9,7 +10,7 @@ async def init_db():
 
 
 async def run():
-    # await init_db()
+    await init_db()
     await bot_main()
 
 

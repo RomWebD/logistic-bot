@@ -1,6 +1,25 @@
 from sqlalchemy import select
 from bot.models.carrier_company import CarrierCompany
 from bot.database.database import async_session
+from enum import Enum
+
+
+class CarrierStatus(Enum):
+    NOT_REGISTERED = "not_registered"
+    NOT_VERIFIED = "not_verified"
+    VERIFIED = "verified"
+
+
+async def get_carrier_status(telegram_id: int) -> CarrierStatus:
+    async with async_session() as session:
+        carrier = await session.scalar(
+            select(CarrierCompany).where(CarrierCompany.telegram_id == telegram_id)
+        )
+        if not carrier:
+            return CarrierStatus.NOT_REGISTERED
+        if carrier.is_verify:
+            return CarrierStatus.VERIFIED
+        return CarrierStatus.NOT_VERIFIED
 
 
 async def is_verified_carrier(chat_id: int) -> bool:

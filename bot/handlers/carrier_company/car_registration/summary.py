@@ -8,6 +8,11 @@ from aiogram.types import (
 from aiogram.fsm.context import FSMContext
 
 from bot.models.TransportVehicle import TransportVehicle
+from bot.models.carrier_company import CarrierCompany
+from bot.services.google_services.sheets import (
+    append_vehicle_to_sheet,
+    create_sheet_if_not_exists,
+)
 from bot.services.verification import get_carrier_by_telegram_id
 
 from .fsm import get_progress_bar
@@ -68,7 +73,12 @@ async def save_car(callback: CallbackQuery, state: FSMContext):
             if not data.get(field):
                 raise ValueError(f"Обов’язкове поле '{field}' не заповнене")
 
-        # Створення об’єкта моделі
+        if not carrier.google_sheet_id:
+            sheet_id, sheet_url = create_sheet_if_not_exists(
+                carrier.company_name, carrier.email
+            )
+            carrier.google_sheet_id = sheet_id
+            carrier.google_sheet_url = sheet_url  # Створення об’єкта моделі
         vehicle = TransportVehicle(
             vehicle_type=data.get("car_type"),
             registration_number=data.get("plate_number"),
@@ -83,7 +93,9 @@ async def save_car(callback: CallbackQuery, state: FSMContext):
         # Запис у БД
         async with async_session() as session:
             session.add(vehicle)
+            session.add(carrier)
             await session.commit()
+        append_vehicle_to_sheet(carrier.google_sheet_id, vehicle)
 
         await callback.message.edit_text(
             "✅ Транспорт успішно додано!", reply_markup=None

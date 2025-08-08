@@ -44,4 +44,7 @@ uvicorn==0.35.0
 yarl==1.20.1
 gspread
 google-auth
+google-api-python-client
+google-auth-oauthlib 
+google-auth-httplib2
 python-decouple 
