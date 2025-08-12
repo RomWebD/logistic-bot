@@ -4,8 +4,9 @@ from aiogram.types import (
     InlineKeyboardMarkup,
     InlineKeyboardButton,
     CallbackQuery,
-    WebAppInfo,
 )
+from aiogram.fsm.context import FSMContext
+
 from aiogram.filters import Command
 from bot.decorators.access import require_verified_carrier
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
@@ -31,7 +32,23 @@ async def handle_vehicles_button(message: Message):
     sheet_url = await crud.get_sheet_url_by_telegram_id(telegram_id)
 
     if not sheet_url:
-        await message.answer("⛔️ Немає Google Sheets URL для компанії.")
+        await message.answer(
+            "⛔️ Немає жодного транспортного засобу, добавте хочаб 1 транспортний засіб, для перегляду автопарку"
+        )
+        inline_keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text="➕ Добавити транспорт",
+                        callback_data="carrier_add_new_car",
+                    ),
+                ],
+            ]
+        )
+        await message.answer(
+            "🔗 Натисніть кнопку нижче, щоб добавити транспорт:",
+            reply_markup=inline_keyboard,
+        )
         return
 
     inline_keyboard = InlineKeyboardMarkup(
@@ -39,7 +56,7 @@ async def handle_vehicles_button(message: Message):
             [
                 InlineKeyboardButton(
                     text="Відкрити автопарк",
-                    web_app=WebAppInfo(url=sheet_url),
+                    url=sheet_url,
                 )
             ],
             [
@@ -107,7 +124,8 @@ async def handle_menu_command(message: Message):
 
 @router.callback_query(F.data == "menu")
 @require_verified_carrier()
-async def handle_menu_callback(callback: CallbackQuery):
+async def handle_menu_callback(callback: CallbackQuery, state: FSMContext):
+    await state.clear()
     await callback.answer()
     await deactivate_inline_keyboard(callback.message)
     await show_carrier_menu(callback.message)

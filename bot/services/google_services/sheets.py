@@ -6,6 +6,7 @@ from .utils import get_vehicle_headers, vehicle_to_row
 from bot.models import TransportVehicle
 
 SHEET_TITLE = "Автомобілі"
+DEFAULT_COLUMN_WIDTH = 150  # Ширина в пікселях (налаштовуй за смаком)
 
 
 def get_sheets_service():
@@ -52,7 +53,37 @@ def create_sheet_if_not_exists(company_name: str, user_email: str) -> tuple[str,
             valueInputOption="USER_ENTERED",
             body={"values": [HEADER_ROW]},
         ).execute()
+        # Отримати ID листа
+        sheet_metadata = (
+            sheets_service.spreadsheets().get(spreadsheetId=sheet_id).execute()
+        )
+        sheet_gid = next(
+            s["properties"]["sheetId"]
+            for s in sheet_metadata["sheets"]
+            if s["properties"]["title"] == SHEET_TITLE
+        )
 
+        # Змінити ширину колонок
+        requests = [
+            {
+                "updateDimensionProperties": {
+                    "range": {
+                        "sheetId": sheet_gid,
+                        "dimension": "COLUMNS",
+                        "startIndex": 0,
+                        "endIndex": len(HEADER_ROW),
+                    },
+                    "properties": {
+                        "pixelSize": DEFAULT_COLUMN_WIDTH,
+                    },
+                    "fields": "pixelSize",
+                }
+            }
+        ]
+
+        sheets_service.spreadsheets().batchUpdate(
+            spreadsheetId=sheet_id, body={"requests": requests}
+        ).execute()
         return sheet_id, sheet_url
 
     except HttpError as e:

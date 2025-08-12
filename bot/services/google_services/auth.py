@@ -10,7 +10,7 @@ SCOPES = [
 ]
 CREDENTIALS_PATH = config("GOOGLE_CREDS_PATH")
 
-TOKEN_PATH = "token.pickle"  # тут збережеться access+refresh токен
+TOKEN_PATH = "secrets/token.pickle"  # тут збережеться access+refresh токен
 
 
 def get_credentials():

@@ -59,7 +59,6 @@ async def show_summary(message: Message, state: FSMContext):
 async def save_car(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     telegram_id = callback.from_user.id
-
     # Витягуємо перевізника з telegram_id
     carrier = await get_carrier_by_telegram_id(telegram_id)
     if not carrier:
@@ -100,20 +99,29 @@ async def save_car(callback: CallbackQuery, state: FSMContext):
         await callback.message.edit_text(
             "✅ Транспорт успішно додано!", reply_markup=None
         )
+        from bot.handlers.carrier_company.crud import build_vehicle_sheet_markup
+
+        await callback.message.answer(
+            "🔗 Натисніть кнопку нижче, щоб переглянути ваш автопарк:",
+            reply_markup=build_vehicle_sheet_markup(carrier.google_sheet_url),
+        )
         await state.clear()
 
     except ValueError as ve:
+        print(ve)
         await callback.message.edit_text(f"❌ Помилка: {ve}")
     except IntegrityError:
         await callback.message.edit_text(
             "❌ Помилка: Транспорт з таким номером уже існує."
         )
     except SQLAlchemyError as e:
+        print(e)
         await callback.message.edit_text(
             "❌ Сталася помилка збереження. Спробуйте пізніше."
         )
         # Тут можна додатково залогувати e
     except Exception as e:
+        print(e)
         await callback.message.edit_text(
             "❌ Невідома помилка. Зверніться до підтримки."
         )
