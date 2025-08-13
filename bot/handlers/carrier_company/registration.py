@@ -22,7 +22,6 @@ router = Router()
 class RegisterCarrierCompany(StatesGroup):
     contact_full_name = State()
     company_name = State()
-    ownership_type = State()
     tax_id = State()
     phone = State()
     email = State()
@@ -82,13 +81,6 @@ async def get_contact_full_name(message: Message, state: FSMContext):
 @router.message(RegisterCarrierCompany.company_name)
 async def get_company_name(message: Message, state: FSMContext):
     await state.update_data(company_name=message.text)
-    await message.answer("📄 Введіть форму власності (ТОВ, ФОП, інше):")
-    await state.set_state(RegisterCarrierCompany.ownership_type)
-
-
-@router.message(RegisterCarrierCompany.ownership_type)
-async def get_ownership_type(message: Message, state: FSMContext):
-    await state.update_data(ownership_type=message.text)
     await message.answer("🆔 Введіть ЄДРПОУ / ІПН:")
     await state.set_state(RegisterCarrierCompany.tax_id)
 
@@ -138,7 +130,6 @@ async def finish_company_registration(message: Message, state: FSMContext):
                     telegram_id=telegram_id,
                     contact_full_name=data["contact_full_name"],
                     company_name=data["company_name"],
-                    ownership_type=data["ownership_type"],
                     tax_id=data["tax_id"],
                     phone=data["phone"],
                     email=data["email"],

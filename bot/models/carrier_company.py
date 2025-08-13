@@ -41,9 +41,7 @@ class CarrierCompany(Base):
     company_name: Mapped[str] = mapped_column(
         String(255), nullable=False, comment="Назва компанії або ФОП"
     )
-    ownership_type: Mapped[str] = mapped_column(
-        String(100), nullable=False, comment="Форма власності (ТОВ, ФОП тощо)"
-    )
+
     tax_id: Mapped[str] = mapped_column(
         String(20), nullable=False, comment="ЄДРПОУ / ІПН"
     )

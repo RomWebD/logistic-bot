@@ -10,7 +10,6 @@ class CarrierCompanyBase(BaseModel):
     email: EmailStr = Field(..., description="Електронна пошта")
 
     company_name: str = Field(..., max_length=255, description="Назва компанії або ФОП")
-    ownership_type: str = Field(..., max_length=100, description="Форма власності (ТОВ, ФОП тощо)")
     tax_id: str = Field(..., max_length=20, description="ЄДРПОУ / ІПН")
     office_address: str = Field(..., max_length=255, description="Адреса офісу")
     website: Optional[HttpUrl] = Field(None, description="Вебсайт компанії")
