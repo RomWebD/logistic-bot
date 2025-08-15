@@ -1,7 +1,7 @@
 # bot/services/client/client_registration.py
 from sqlalchemy import select
 from bot.database.database import async_session
-from bot.models import Client  # ✅ правильний імпорт
+from bot.models import Client  
 from bot.schemas.client import ClientRegistrationData
 
 

@@ -54,6 +54,9 @@ def validate_company_name_input(text: str) -> tuple[Optional[str], Optional[str]
 
 
 def validate_tax_id_input(text: str) -> tuple[Optional[str], Optional[str]]:
+    s = (text or "").strip()
+    if s == "-" or s == "":
+        return None, None
     # Для України: ЄДРПОУ — 8 цифр, ІПН (фіз. особа) — 10 цифр. Дозволимо 8 або 10.
     digits = re.sub(r"\D", "", (text or ""))
     if len(digits) not in (8, 10):
@@ -81,7 +84,7 @@ class ClientRegistrationData(BaseModel):
     telegram_id: int = Field(..., ge=1)
     full_name: str = Field(..., min_length=2, max_length=100)
     company_name: str = Field(..., min_length=2, max_length=150)
-    tax_id: str = Field(..., min_length=8, max_length=10)
+    tax_id: Optional[str] = Field(None, min_length=8, max_length=10)
     phone: str = Field(..., min_length=10, max_length=16)
     email: EmailStr
     address: Optional[str] = Field(None, max_length=255)
