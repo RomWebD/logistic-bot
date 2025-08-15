@@ -25,7 +25,7 @@ async def register_new_client(data: ClientRegistrationData) -> bool:
             return False
 
         # Pydantic v2 -> .model_dump()
-        payload = data.model_dump()
+        payload = data.model_dump(mode="json")
         payload["is_verify"] = False
         client = Client(**payload)
         session.add(client)
