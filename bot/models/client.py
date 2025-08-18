@@ -4,7 +4,6 @@ from sqlalchemy import String, Integer, BigInteger, Boolean, text
 from bot.database.database import Base
 
 
-
 class Client(Base):
     __tablename__ = "clients"
 
@@ -24,5 +23,10 @@ class Client(Base):
     email: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     address: Mapped[str | None] = mapped_column(String(255), nullable=True)
     website: Mapped[str | None] = mapped_column(String(255), nullable=True)
-
+    google_sheet_url: Mapped[str] = mapped_column(
+        String(512), nullable=True, comment="URL до Google Sheets із автопарком"
+    )
+    google_sheet_id: Mapped[str] = mapped_column(
+        String(512), nullable=True, comment="URL до Google Sheets із заявками"
+    )
     # опційно: created_at/updated_at — якщо у вас є міксін

@@ -45,7 +45,7 @@ async def start_client_application(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "confirm_start_application")
 async def confirm_start_application(callback: CallbackQuery, state: FSMContext):
     await callback.message.answer(
-        "🚚 Звідки потрібно забрати вантаж?\n\nВведіть місто відправлення (наприклад: Київ):"
+        "🚚 Звідки потрібно забрати вантаж?\n\nВведіть місто відправлення (наприклад: <code>Київ</code>):"
     )
     await state.set_state(ClientApplicationFSM.from_city)
     await callback.answer()
@@ -55,7 +55,7 @@ async def confirm_start_application(callback: CallbackQuery, state: FSMContext):
 async def get_from_route(message: Message, state: FSMContext):
     await state.update_data(from_city=message.text)
     await message.answer(
-        "🏁 Куди потрібно доставити вантаж?\n\nВведіть місто призначення (наприклад: Львів):"
+        "🏁 Куди потрібно доставити вантаж?\n\nВведіть місто призначення (наприклад: <code>Львів</code>):"
     )
     await state.set_state(ClientApplicationFSM.to_city)
 
@@ -63,7 +63,9 @@ async def get_from_route(message: Message, state: FSMContext):
 @router.message(ClientApplicationFSM.to_city)
 async def get_to_route(message: Message, state: FSMContext):
     await state.update_data(to_city=message.text)
-    await message.answer("📅 Введіть дату подачі (наприклад: 20 липня до 10:00):")
+    await message.answer(
+        "📅 Введіть дату подачі (наприклад: <code>20 липня до 10:00</code>):"
+    )
     await state.set_state(ClientApplicationFSM.date)
 
 
@@ -71,7 +73,7 @@ async def get_to_route(message: Message, state: FSMContext):
 async def get_date(message: Message, state: FSMContext):
     await state.update_data(date=message.text)
     await message.answer(
-        "📦 Введіть тип вантажу(наприклад, Побутова техніка, упакована на палетах):"
+        "📦 Введіть тип вантажу(наприклад, <code>Побутова техніка, упакована на палетах</code>):"
     )
     await state.set_state(ClientApplicationFSM.cargo_type)
 
@@ -79,35 +81,37 @@ async def get_date(message: Message, state: FSMContext):
 @router.message(ClientApplicationFSM.cargo_type)
 async def get_cargo_type(message: Message, state: FSMContext):
     await state.update_data(cargo_type=message.text)
-    await message.answer("📦 Введіть обʼєм (наприклад: 6 палет):")
+    await message.answer("📦 Введіть обʼєм (наприклад: <code>6 палет</code>):")
     await state.set_state(ClientApplicationFSM.volume)
 
 
 @router.message(ClientApplicationFSM.volume)
 async def get_volume(message: Message, state: FSMContext):
     await state.update_data(volume=message.text)
-    await message.answer("⚖️ Введіть вагу (наприклад: 2.2 т):")
+    await message.answer("⚖️ Введіть вагу (наприклад: <code>2.2 т</code>):")
     await state.set_state(ClientApplicationFSM.weight)
 
 
 @router.message(ClientApplicationFSM.weight)
 async def get_weight(message: Message, state: FSMContext):
     await state.update_data(weight=message.text)
-    await message.answer("📥 Як буде завантаження (наприклад: рокла, рампа):")
+    await message.answer(
+        "📥 Як буде завантаження (наприклад: <code>рокла, рампа</code>):"
+    )
     await state.set_state(ClientApplicationFSM.loading)
 
 
 @router.message(ClientApplicationFSM.loading)
 async def get_loading(message: Message, state: FSMContext):
     await state.update_data(loading=message.text)
-    await message.answer("📤 Як буде вивантаження (наприклад: ручне):")
+    await message.answer("📤 Як буде вивантаження (наприклад: <code>ручне</code>):")
     await state.set_state(ClientApplicationFSM.unloading)
 
 
 @router.message(ClientApplicationFSM.unloading)
 async def get_unloading(message: Message, state: FSMContext):
     await state.update_data(unloading=message.text)
-    await message.answer("💰 Введіть бажану ціну (наприклад: 8000 грн):")
+    await message.answer("💰 Введіть бажану ціну (наприклад: <code>8000 грн</code>):")
     await state.set_state(ClientApplicationFSM.price)
 
 
@@ -118,14 +122,14 @@ async def finish_application(message: Message, state: FSMContext):
 
     await message.answer(
         f"""📦 <b>Перевірте дані заявки:</b>
-Маршрут: {data["from_city"]} → {data["to_city"]}
+<pre>Маршрут: {data["from_city"]} → {data["to_city"]}
 Дата подачі: {data["date"]}
 Тип вантажу: {data["cargo_type"]}
 Обʼєм: {data["volume"]}
 Орієнтовна вага: {data["weight"]}
 Завантаження: {data["loading"]}
 Вивантаження: {data["unloading"]}
-Ціна: {data["price"]} грн
+Ціна: {data["price"]} грн</pre>
 
 Все вірно?""",
         reply_markup=InlineKeyboardMarkup(
@@ -164,54 +168,34 @@ async def confirm_shipment(callback: CallbackQuery, state: FSMContext):
         price=data["price"],
     )
 
+    await callback.message.answer(
+        f"""📦 <b>Нова заявка на перевезення:</b>
+    Маршрут: {data.get("from_city")} -> {data.get("to_city")}
+    Дата подачі: {data["date"]}
+    Тип вантажу: {data["cargo_type"]}
+    Обʼєм: {data["volume"]}
+    Орієнтовна вага: {data["weight"]}
+    Завантаження: {data["loading"]}
+    Вивантаження: {data["unloading"]}
+    Ціна: {data.get("price")} грн"""
+    )
+
     async with async_session() as session:
         session.add(new_request)
         await session.commit()
         await session.refresh(new_request)
         await callback.message.edit_text("✅ Заявку створено успішно!")
-
-    #     await message.answer(
-    #         f"""📦 <b>Нова заявка на перевезення:</b>
-    # Маршрут: {data["route"]}
-    # Дата подачі: {data["date"]}
-    # Тип вантажу: {data["cargo_type"]}
-    # Обʼєм: {data["volume"]}
-    # Орієнтовна вага: {data["weight"]}
-    # Завантаження: {data["loading"]}
-    # Вивантаження: {data["unloading"]}
-    # Ціна: {price} грн""",
-    # reply_markup=InlineKeyboardMarkup(
-    #     inline_keyboard=[
-    #         [
-    #             InlineKeyboardButton(
-    #                 text="✅ Прийняти рейс",
-    #                 callback_data=f"accept_{new_request.id}",
-    #             ),
-    #             InlineKeyboardButton(
-    #                 text="❌ Відмовитись",
-    #                 callback_data=f"decline_{new_request.id}",
-    #             ),
-    #         ],
-    #         [
-    #             InlineKeyboardButton(
-    #                 text="💬 Запропонувати іншу ставку",
-    #                 callback_data=f"negotiate_{new_request.id}",
-    #             )
-    #         ],
-    #     ]
-    # ),
-    #     parse_mode="HTML",
-    # )
-
-    await notify_carriers(bot=callback.bot, request=new_request)
+    # await notify_carriers(bot=callback.bot, request=new_request)
 
     await state.clear()
     await callback.answer()
 
 
-@router.callback_query(F.data == "cancel_application")
+@router.callback_query(F.data == "cancel_shipment")
 async def cancel_application(callback: CallbackQuery, state: FSMContext):
-    await callback.message.answer(
+    data = await state.get_data()
+    print(data)
+    await callback.message.edit_text(
         "🚫 Заявку скасовано. Якщо передумаєте — просто натисніть знову кнопку ✍️ Створити заявку."
     )
     await state.clear()

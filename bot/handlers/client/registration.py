@@ -55,15 +55,20 @@ async def start_client_registration(callback: CallbackQuery, state: FSMContext):
 
     if await check_existing_client(telegram_id):
         await callback.message.answer(
-            "✅ Ви вже зареєстровані як клієнт.",
+            "✅ Ви вже зареєстровані як клієнт.\nЩо бажаєте зробити?",
             reply_markup=InlineKeyboardMarkup(
                 inline_keyboard=[
                     [
                         InlineKeyboardButton(
+                            text="📂 Перейти до меню", callback_data="client_menu"
+                        )
+                    ],
+                    [
+                        InlineKeyboardButton(
                             text="📦 Створити заявку",
                             callback_data="client_application",
-                        )
-                    ]
+                        ),
+                    ],
                 ]
             ),
         )

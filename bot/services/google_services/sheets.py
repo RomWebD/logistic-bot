@@ -7,6 +7,7 @@ from bot.models import TransportVehicle
 
 SHEET_TITLE = "Автомобілі"
 DEFAULT_COLUMN_WIDTH = 150  # Ширина в пікселях (налаштовуй за смаком)
+CLIENT_SHEET_TITLE = "Заявки"
 
 
 def get_sheets_service():

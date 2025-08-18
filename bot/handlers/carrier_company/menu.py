@@ -19,13 +19,6 @@ from bot.handlers.carrier_company.car_registration.fsm_helpers import (
 router = Router()
 
 
-# Обробка натискання текстової кнопки з ReplyKeyboardMarkup
-# @router.message(F.text == "🚚 Мої транспортні засоби")
-# async def handle_vehicles_button(message: Message):
-#     await message.answer(
-#         "🔗 Натисніть кнопку нижче, щоб переглянути ваш автопарк:",
-#         reply_markup=vehicle_webapp_markup,
-#     )
 @router.message(F.text == "🚚 Мої транспортні засоби")
 async def handle_vehicles_button(message: Message):
     telegram_id = message.from_user.id
