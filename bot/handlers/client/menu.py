@@ -109,27 +109,66 @@ async def handle_menu_callback(callback: CallbackQuery, state: FSMContext):
 
 
 @router.message(F.text == "📋 Мої заявки")
+@require_verified_client()
 async def handle_my_requests(message: Message):
     telegram_id = message.from_user.id
     client = await crud.get_client_by_telegram_id(telegram_id)
+    if not client:
+        await message.answer("⛔️ Ви ще не зареєстровані як клієнт.")
+        return
 
-    if not client.google_sheet_url:
-        client = await crud.get_client_by_telegram_id(telegram_id)
-        manager = RequestSheetManager()
-        sheet_id, sheet_url = manager.create_request_sheet(
-            client.full_name, client.email
+    total = await crud.count_requests_by_telegram(telegram_id)
+    if total == 0:
+        kb = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text="✍️ Створити заявку", callback_data="client_application"
+                    )
+                ]
+            ]
         )
+        await message.answer(
+            "У вас ще немає заявок. Створіть першу — і тоді ми автоматично підготуємо Google Sheet.",
+            reply_markup=kb,
+        )
+        return
+
+    manager = RequestSheetManager()
+
+    # ⬇️ ВАЖЛИВО: додаємо tg_id для тегування appProperties.telegram_id
+    sheet_id, sheet_url = manager.ensure_request_sheet_for_client(
+        tg_id=telegram_id,
+        client_full_name=client.full_name,
+        client_email=client.email,
+        google_sheet_id=client.google_sheet_id,
+        google_sheet_url=client.google_sheet_url,
+    )
+
+    # Якщо створили новий — зберегти в БД
+    if (client.google_sheet_id != sheet_id) or (client.google_sheet_url != sheet_url):
         await crud.update_client_sheet_by_telegram(telegram_id, sheet_id, sheet_url)
 
-    inline_keyboard = InlineKeyboardMarkup(
+    # Зафіксувати “відкрив розділ” + хто редагував останню ревізію
+    rev = manager.get_latest_revision_info(sheet_id)
+    if rev:
+        await crud.mark_sheet_opened(
+            tg_id=telegram_id,
+            sheet_kind="requests",
+            revision_id=rev["id"],
+            modified_time=rev.get("modifiedTime"),
+            user_email=(rev.get("user") or {}).get("emailAddress"),
+            user_name=(rev.get("user") or {}).get("displayName"),
+        )
+
+    kb = InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="Відкрити заявки", url=sheet_url)],
+            [InlineKeyboardButton(text="🔗 Відкрити заявки", url=sheet_url)],
             [
                 InlineKeyboardButton(
-                    text="✍️ Створити заявку", callback_data="client_application"
+                    text="✍️ Створити нову заявку", callback_data="client_application"
                 )
             ],
         ]
     )
-
-    await message.answer("🔗 Ваші заявки:", reply_markup=inline_keyboard)
+    await message.answer("🔗 Ваші заявки:", reply_markup=kb)

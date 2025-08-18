@@ -23,10 +23,9 @@ class Client(Base):
     email: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     address: Mapped[str | None] = mapped_column(String(255), nullable=True)
     website: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    google_sheet_url: Mapped[str] = mapped_column(
+    google_sheet_url: Mapped[str | None] = mapped_column(
         String(512), nullable=True, comment="URL до Google Sheets із автопарком"
     )
-    google_sheet_id: Mapped[str] = mapped_column(
+    google_sheet_id: Mapped[str | None] = mapped_column(
         String(512), nullable=True, comment="URL до Google Sheets із заявками"
     )
-    # опційно: created_at/updated_at — якщо у вас є міксін

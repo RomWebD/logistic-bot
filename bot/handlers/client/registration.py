@@ -25,6 +25,7 @@ from bot.services.client.client_registration import (
 )
 from bot.ui.keyboards import client_main_kb
 from bot.ui.common.summary import build_summary_text, build_summary_main_keyboard
+from bot.decorators.access import require_verified_client
 
 router = Router()
 
@@ -50,6 +51,7 @@ class RegisterClientFSM(StatesGroup):
 
 
 @router.callback_query(F.data == "role_client")
+@require_verified_client()
 async def start_client_registration(callback: CallbackQuery, state: FSMContext):
     telegram_id = callback.from_user.id
 
@@ -211,6 +213,20 @@ async def save_client_registration(callback: CallbackQuery, state: FSMContext):
                 "⚠️ Клієнт з таким номером або поштою вже існує."
             )
         else:
+            full_text = callback.message.html_text or callback.message.text or ""
+
+            # Вирізаємо все до першого "🧑‍💼"
+            if "🧑‍💼" in full_text:
+                # знайдемо де починається <pre>
+                pre_start = full_text.find("<pre>")
+                pre_end = full_text.find("</pre>")
+                if pre_start != -1 and pre_end != -1:
+                    pre_content = full_text[pre_start + 5 : pre_end]  # витягуємо вміст
+                    # залишаємо тільки з 🧑‍💼
+                    if "🧑‍💼" in pre_content:
+                        pre_content = "🧑‍💼" + pre_content.split("🧑‍💼", 1)[1]
+                    summary = f"<pre>{pre_content}</pre>"
+            await callback.message.edit_text(text=summary, reply_markup=None)
             await callback.message.answer(
                 "✅ Реєстрація клієнта успішна!\n"
                 "⚠️ Ви ще не верифіковані. Зачекайте підтвердження або зверніться до адміністратора.",
@@ -226,7 +242,7 @@ async def save_client_registration(callback: CallbackQuery, state: FSMContext):
             ]
         )
         await callback.message.answer(
-            "⚠️  Трапились, якісь проблеми, на жаль, дані втраечено!\n"
+            "⚠️  Трапились, якісь проблеми, на жаль, дані втрачено!\n"
             "⚠️ Заповніть форму спочатку.",
             reply_markup=start_keyboard,
         )

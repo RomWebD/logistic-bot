@@ -5,6 +5,7 @@ from bot.services.verification import CarrierStatus, get_carrier_status
 from typing import Union
 
 from bot.services.client.verification_client import ClientStatus, get_client_status
+from bot.ui.keyboards import client_main_kb
 
 
 def require_verified_carrier():
@@ -19,7 +20,8 @@ def require_verified_carrier():
 
             elif status == CarrierStatus.NOT_VERIFIED:
                 await message.answer(
-                    "⚠️ Ви ще не верифіковані. Зачекайте підтвердження або зверніться до адміністратора."
+                    "⏳ Ваш профіль ще проходить верифікацію.\nСпробуйте пізніше або зверніться до адміністратора.",
+                    reply_markup=client_main_kb(is_verified=False),
                 )
                 return
 
@@ -55,12 +57,14 @@ def require_verified_client():
                 # Відповідь коректно і для Message, і для CallbackQuery
                 if isinstance(event, CallbackQuery):
                     await event.message.answer(
-                        "⚠️ Ви ще не верифіковані. Зачекайте підтвердження або зверніться до адміністратора."
+                        "⏳ Ваш профіль ще проходить верифікацію.\nСпробуйте пізніше або зверніться до адміністратора.",
+                        reply_markup=client_main_kb(is_verified=False),
                     )
                     await event.answer()
                 else:
                     await event.answer(
-                        "⚠️ Ви ще не верифіковані. Зачекайте підтвердження або зверніться до адміністратора."
+                        "⏳ Ваш профіль ще проходить верифікацію.\nСпробуйте пізніше або зверніться до адміністратора.",
+                        reply_markup=client_main_kb(is_verified=False),
                     )
                 return
 

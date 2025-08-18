@@ -5,9 +5,14 @@ from aiogram.types import CallbackQuery, Message
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 from bot.database.database import async_session
+from bot.handlers.client.crud import update_client_sheet_by_telegram
+from bot.models.client import Client
 from bot.models.shipment_request import Shipment_request
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from bot.services.google_services.sheets_client import RequestSheetManager
+from bot.services.google_services.utils import request_to_row
 from bot.services.notifier import notify_carriers
+from sqlalchemy.future import select
 
 router = Router()
 
@@ -184,7 +189,33 @@ async def confirm_shipment(callback: CallbackQuery, state: FSMContext):
         session.add(new_request)
         await session.commit()
         await session.refresh(new_request)
-        await callback.message.edit_text("✅ Заявку створено успішно!")
+        # 2️⃣ тягнемо клієнта
+        result = await session.execute(
+            select(Client).where(Client.telegram_id == telegram_id)
+        )
+        client: Client | None = result.scalar_one_or_none()
+
+        if client:
+            mgr = RequestSheetManager()
+            sheet_id, sheet_url = mgr.ensure_request_sheet_for_client(
+                tg_id=telegram_id,
+                client_full_name=client.full_name,
+                client_email=client.email,
+                google_sheet_id=client.google_sheet_id,
+                google_sheet_url=client.google_sheet_url,
+            )
+
+            # якщо файл змінився → апдейт БД
+            if (
+                sheet_id != client.google_sheet_id
+                or sheet_url != client.google_sheet_url
+            ):
+                await update_client_sheet_by_telegram(telegram_id, sheet_id, sheet_url)
+
+            # 3️⃣ пишемо заявку в Google Sheets
+            mgr.svc_sheets.put_row(sheet_id, "Заявки", request_to_row(new_request))
+
+    await callback.message.edit_text("✅ Заявку створено успішно!")
     # await notify_carriers(bot=callback.bot, request=new_request)
 
     await state.clear()
