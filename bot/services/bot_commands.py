@@ -4,7 +4,7 @@ from aiogram.types import (
     BotCommandScopeChat,
     MenuButtonCommands,
 )
-from bot.database.database import async_session
+from bot.database.database import  get_session
 from sqlalchemy import select
 from bot.models.carrier_company import CarrierCompany
 from aiogram.types import ReplyKeyboardRemove
@@ -23,7 +23,7 @@ async def set_verified_carrier_menu(bot: Bot, chat_id: int):
 #     await bot.delete_my_commands(scope=BotCommandScopeDefault())
 #     await bot.set_chat_menu_button(menu_button=MenuButtonDefault())
 async def remove_menu_for_all(bot: Bot):
-    async with async_session() as session:
+    async for session in get_session():
         result = await session.scalars(
             select(CarrierCompany.telegram_id)
             # .where(CarrierCompany.is_verify == False)

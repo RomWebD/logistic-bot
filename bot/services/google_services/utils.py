@@ -27,12 +27,12 @@ def vehicle_to_row(vehicle: TransportVehicle) -> list[str]:
 
 def get_request_headers() -> list[str]:
     return [
-        # "ID заявки",
+        "ID заявки",
         # "Клієнт (Telegram ID)",
         "Місто відправлення",
         "Місто призначення",
-        "Дата",
-        # "Введений текст дати",
+        "Дата подачі",
+        "Введений текст дати",
         "Тип вантажу",
         "Обʼєм",
         "Вага",
@@ -46,12 +46,12 @@ def get_request_headers() -> list[str]:
 
 def request_to_row(req: Shipment_request) -> list[str]:
     return [
-        # str(req.id),
+        str(req.id),
         # str(req.client_telegram_id),
         req.from_city,
         req.to_city,
         req.date.strftime("%Y-%m-%d %H:%M") if req.date else "",
-        # req.date_text or "",
+        req.date_text or "",
         req.cargo_type or "",
         str(req.volume or ""),
         str(req.weight or ""),

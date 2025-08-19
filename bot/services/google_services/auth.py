@@ -27,6 +27,9 @@ def get_credentials():
             if not creds.valid:
                 if creds.expired and creds.refresh_token:
                     creds.refresh(Request())
+                    # 🔥 обов'язково перезаписати токен у файл
+                    with open(TOKEN_PATH, "w") as token:
+                        token.write(creds.to_json())
                 else:
                     raise RefreshError("Invalid or expired credentials")
         except RefreshError:

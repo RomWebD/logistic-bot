@@ -9,7 +9,7 @@ from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 from sqlalchemy import select
 from bot.models.carrier_company import CarrierCompany
-from bot.database.database import async_session
+from bot.database.database import get_session
 from bot.services.bot_commands import set_verified_carrier_menu
 from bot.services.verification import (
     delete_carrier_by_telegram_id,
@@ -118,7 +118,7 @@ async def finish_company_registration(message: Message, state: FSMContext):
     data = await state.get_data()
     telegram_id = message.from_user.id
 
-    async with async_session() as session:
+    async for session in get_session():
         existing = await session.scalar(
             select(CarrierCompany).where(CarrierCompany.phone == data["phone"])
         )

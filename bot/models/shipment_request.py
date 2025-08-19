@@ -6,7 +6,6 @@ from datetime import datetime
 from bot.ai_helper.date_parser import normalize_date_with_groq
 from bot.database.database import Base
 from sqlalchemy.orm import validates
-import dateparser
 
 
 class Shipment_request(Base):

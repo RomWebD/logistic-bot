@@ -1,12 +1,12 @@
 # bot/services/client/client_registration.py
 from sqlalchemy import select
-from bot.database.database import async_session
+from bot.database.database import get_session
 from bot.models import Client
 from bot.schemas.client import ClientRegistrationData
 
 
 async def check_existing_client(telegram_id: int) -> bool:
-    async with async_session() as session:
+    async for session in get_session():
         existing = await session.scalar(
             select(Client).where(Client.telegram_id == telegram_id)
         )
@@ -14,7 +14,7 @@ async def check_existing_client(telegram_id: int) -> bool:
 
 
 async def register_new_client(data: ClientRegistrationData) -> bool:
-    async with async_session() as session:
+    async for session in get_session():
         # Перевірка дубля по телефону/емейлу
         exists = await session.scalar(
             select(Client).where(

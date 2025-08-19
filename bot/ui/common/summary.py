@@ -202,7 +202,3 @@ def build_edit_field_keyboard(
 def state_by_name(group: Type[StatesGroup], field_name: str) -> Optional[State]:
     st = getattr(group, field_name, None)
     return st if isinstance(st, State) else None
-
-
-
-

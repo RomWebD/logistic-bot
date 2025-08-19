@@ -1,6 +1,6 @@
 from sqlalchemy import select
 from bot.models.carrier_company import CarrierCompany
-from bot.database.database import async_session
+from bot.database.database import get_session
 from enum import Enum
 
 
@@ -11,7 +11,7 @@ class CarrierStatus(Enum):
 
 
 async def get_carrier_status(telegram_id: int) -> CarrierStatus:
-    async with async_session() as session:
+    async for session in get_session():
         carrier = await session.scalar(
             select(CarrierCompany).where(CarrierCompany.telegram_id == telegram_id)
         )
@@ -23,7 +23,7 @@ async def get_carrier_status(telegram_id: int) -> CarrierStatus:
 
 
 async def is_verified_carrier(chat_id: int) -> bool:
-    async with async_session() as session:
+    async for session in get_session():
         result = await session.scalar(
             select(CarrierCompany).where(
                 CarrierCompany.telegram_id == chat_id,
@@ -34,14 +34,14 @@ async def is_verified_carrier(chat_id: int) -> bool:
 
 
 async def get_carrier_by_telegram_id(telegram_id: int) -> CarrierCompany | None:
-    async with async_session() as session:
+    async for session in get_session():
         return await session.scalar(
             select(CarrierCompany).where(CarrierCompany.telegram_id == telegram_id)
         )
 
 
 async def delete_carrier_by_telegram_id(telegram_id: int, callback) -> bool:
-    async with async_session() as session:
+    async for session in get_session():
         carrier = await session.scalar(
             select(CarrierCompany).where(CarrierCompany.telegram_id == telegram_id)
         )

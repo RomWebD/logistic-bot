@@ -3,7 +3,7 @@
 import asyncio
 import datetime
 from bot.models.shipment_request import Shipment_request
-from bot.database.database import async_session
+from bot.database.database import get_session
 from bot.services.notifier import notify_carriers
 from bot.main import bot  # якщо бот вже створений
 
@@ -20,7 +20,7 @@ async def main():
         price=8000,
     )
 
-    async with async_session() as session:
+    async for session in get_session():
         session.add(fake)
         await session.commit()
 

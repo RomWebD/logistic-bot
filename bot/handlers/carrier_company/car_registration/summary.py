@@ -17,7 +17,7 @@ from bot.services.verification import get_carrier_by_telegram_id
 from .fsm import get_progress_bar
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
-from bot.database.database import async_session
+from bot.database.database import get_session
 
 router = Router()
 
@@ -89,7 +89,7 @@ async def save_car(callback: CallbackQuery, state: FSMContext):
         )
 
         # Запис у БД
-        async with async_session() as session:
+        async for session in get_session():
             session.add(vehicle)
             session.add(carrier)
             await session.commit()

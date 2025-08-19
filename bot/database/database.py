@@ -8,7 +8,10 @@ DATABASE_URL = os.getenv(
 )  # default SQLite
 
 engine = create_async_engine(DATABASE_URL, echo=True, pool_pre_ping=True)
-async_session = async_sessionmaker(engine, expire_on_commit=False)
+async_session_maker = async_sessionmaker(
+    engine,
+    expire_on_commit=False,  # щоб дані не зникали після commit()
+)
 
 
 class Base(DeclarativeBase):
@@ -16,5 +19,12 @@ class Base(DeclarativeBase):
 
 
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
-    async with async_session() as session:
+    """
+    Dependency для отримання асинхронної сесії.
+    Використовується в сервісах / репозиторіях / CRUD.
+
+    Yields:
+        AsyncSession: відкрита сесія до БД
+    """
+    async with async_session_maker() as session:
         yield session

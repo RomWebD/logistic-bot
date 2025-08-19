@@ -1,18 +1,19 @@
-from sqlalchemy import select, func
-from bot.database.database import async_session
+from sqlalchemy import select, func, update
+from bot.database.database import get_session
 from bot.handlers.client.utils import _now_utc, _parse_google_time
 from bot.models import Client
 from aiogram.types import (
     InlineKeyboardMarkup,
     InlineKeyboardButton,
 )
-from typing import Optional
+from typing import Optional, Tuple
 
 from bot.models.sheet_binding import SheetBinding, SheetKind
 from bot.models.shipment_request import Shipment_request
 
 from typing import Literal
 from bot.services.google_services.sheets_client import RequestSheetManager
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 async def sync_requests_from_sheets(client: Client):
@@ -43,7 +44,7 @@ async def sync_requests_from_sheets(client: Client):
     if not rows:
         return 0  # нічого немає
 
-    async with async_session() as session:
+    async for session in get_session():
         for row in rows:
             # перетворюємо рядок у модель
             req = Shipment_request(
@@ -65,34 +66,36 @@ async def sync_requests_from_sheets(client: Client):
     return len(rows)
 
 
-async def get_client_by_telegram_id(telegram_id: int) -> Optional[Client]:
-    """
-    Повертає екземпляр Client за telegram_id або None, якщо не знайдено.
-    """
-    async with async_session() as session:
-        result = await session.execute(
-            select(Client).where(Client.telegram_id == telegram_id)
+async def get_client_by_telegram_id(
+    telegram_id: int, session: AsyncSession | None = None
+) -> Optional[Client]:
+    own = False
+    if session is None:
+        own = True
+        async for session in get_session():
+            break
+
+    res = await session.execute(select(Client).where(Client.telegram_id == telegram_id))
+    client = res.scalar_one_or_none()
+
+    if own:
+        await session.close()
+
+    return client
+
+
+async def update_client_sheet_by_telegram(telegram_id: int, sheet_id: str, sheet_url: str) -> None:
+    async for session in get_session():
+        await session.execute(
+            update(Client)
+            .where(Client.telegram_id == telegram_id)
+            .values(google_sheet_id=sheet_id, google_sheet_url=sheet_url)
         )
-        return result.scalar_one_or_none()
-
-
-async def update_client_sheet_by_telegram(
-    telegram_id: int, sheet_id: str, sheet_url: str
-) -> None:
-    async with async_session() as session:
-        result = await session.execute(
-            select(Client).where(Client.telegram_id == telegram_id)
-        )
-        client = result.scalar_one_or_none()
-
-        if client:
-            client.google_sheet_id = sheet_id
-            client.google_sheet_url = sheet_url
-            await session.commit()
+        await session.commit()
 
 
 async def count_requests_by_telegram(telegram_id: int) -> int:
-    async with async_session() as session:
+    async for session in get_session():
         res = await session.execute(
             select(func.count(Shipment_request.id)).where(
                 Shipment_request.client_telegram_id == telegram_id
@@ -101,6 +104,46 @@ async def count_requests_by_telegram(telegram_id: int) -> int:
         return int(res.scalar() or 0)
 
 
+async def get_request_by_id(
+    request_id: int, session: AsyncSession | None = None
+) -> Optional[Shipment_request]:
+    own = False
+    if session is None:
+        own = True
+        async for session in get_session():
+            break
+
+    res = await session.execute(
+        select(Shipment_request).where(Shipment_request.id == request_id)
+    )
+    req = res.scalar_one_or_none()
+
+    if own:
+        await session.close()
+
+    return req
+
+async def get_client_and_request(
+    telegram_id: int,
+    request_id: int,
+    session: AsyncSession | None = None,
+) -> Tuple[Optional[Client], Optional[Shipment_request]]:
+    own = False
+    if session is None:
+        own = True
+        async for session in get_session():
+            break
+
+    res_c = await session.execute(select(Client).where(Client.telegram_id == telegram_id))
+    client = res_c.scalar_one_or_none()
+
+    res_r = await session.execute(select(Shipment_request).where(Shipment_request.id == request_id))
+    req = res_r.scalar_one_or_none()
+
+    if own:
+        await session.close()
+
+    return client, req
 async def mark_sheet_opened(
     tg_id: int,
     sheet_kind: Literal["requests", "vehicles"],
@@ -117,7 +160,7 @@ async def mark_sheet_opened(
 
     Якщо биндингу ще не існує — створює його (sheet_id/url підтягне з Client).
     """
-    async with async_session() as session:
+    async for session in get_session():
         # 1) знайдемо/створимо binding
         binding: Optional[SheetBinding] = await session.scalar(
             select(SheetBinding).where(
@@ -175,7 +218,8 @@ async def update_binding_after_sync(
     :param clear_cooldown: очистити cooldown_until (дефолт: так)
     :param mark_not_in_progress: зняти прапор sync_in_progress (дефолт: так)
     """
-    async with async_session() as session:
+
+    async for session in get_session():
         binding = await session.get(SheetBinding, binding_id)
         if not binding:
             raise ValueError(f"SheetBinding id={binding_id} not found")
@@ -192,7 +236,43 @@ async def update_binding_after_sync(
         await session.refresh(binding)
         return binding
 
+async def ensure_client_sheet_binding(
+    telegram_id: int,
+    new_sheet_id: str,
+    new_sheet_url: str,
+    session: AsyncSession | None = None,
+) -> bool:
+    """
+    Повертає True, якщо значення змінились і ми оновили БД.
+    """
+    own = False
+    if session is None:
+        own = True
+        async for session in get_session():
+            break
 
+    res = await session.execute(select(Client).where(Client.telegram_id == telegram_id))
+    client = res.scalar_one_or_none()
+    if not client:
+        if own:
+            await session.close()
+        return False
+
+    if client.google_sheet_id != new_sheet_id or client.google_sheet_url != new_sheet_url:
+        await session.execute(
+            update(Client)
+            .where(Client.id == client.id)
+            .values(google_sheet_id=new_sheet_id, google_sheet_url=new_sheet_url)
+        )
+        await session.commit()
+        changed = True
+    else:
+        changed = False
+
+    if own:
+        await session.close()
+
+    return changed
 # utils.py або crud.py
 def build_vehicle_sheet_markup(sheet_url: str) -> InlineKeyboardMarkup:
     if sheet_url:

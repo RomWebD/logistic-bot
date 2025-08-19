@@ -1,7 +1,7 @@
 # bot/services/verification_client.py
 from enum import Enum
 from sqlalchemy import select
-from bot.database.database import async_session
+from bot.database.database import get_session
 from bot.models import Client
 
 
@@ -12,7 +12,7 @@ class ClientStatus(Enum):
 
 
 async def get_client_status(telegram_id: int) -> ClientStatus:
-    async with async_session() as session:
+    async for session in get_session():
         client = await session.scalar(
             select(Client).where(Client.telegram_id == telegram_id)
         )
