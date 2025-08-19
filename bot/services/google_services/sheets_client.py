@@ -1,5 +1,6 @@
 # google_service/sheets_client.py
 from __future__ import annotations
+import hashlib
 from typing import List, Tuple, Optional, Dict, Any
 from googleapiclient.errors import HttpError
 
@@ -131,7 +132,9 @@ class GoogleDriveService:
         body = {"appProperties": props}
         self.drive.files().update(fileId=file_id, body=body, fields="id").execute()
 
-    def get_latest_revision_info(self, file_id: str) -> Optional[Dict[str, Any]]:
+    def get_latest_revision_info(
+        self, file_id: str, filter_email: str
+    ) -> Optional[Dict[str, Any]]:
         """
         Повертає інформацію про останню ревізію:
         { 'id': str, 'modifiedTime': str (ISO), 'user': { displayName, emailAddress } }
@@ -143,12 +146,16 @@ class GoogleDriveService:
         revs = resp.get("revisions", [])
         if not revs:
             return None
-        latest = max(revs, key=lambda r: r.get("modifiedTime", ""))
-        return {
-            "id": latest.get("id"),
-            "modifiedTime": latest.get("modifiedTime"),
-            "user": (latest.get("lastModifyingUser") or {}),
-        }
+        user_revs = [
+            r
+            for r in revs
+            if (r.get("lastModifyingUser") or {}).get("emailAddress") == filter_email
+        ]
+        latest_user_rev = max(
+            user_revs, key=lambda r: r.get("modifiedTime", ""), default=None
+        )
+
+        print(latest_user_rev)
 
 
 # -------------------- Orchestrator / Manager --------------------
@@ -164,9 +171,46 @@ class RequestSheetManager:
         self.svc_sheets = GoogleSheetsService()
         self.svc_drive = GoogleDriveService()
 
-    def get_latest_revision_info(self, sheet_id: str) -> Optional[Dict[str, Any]]:
+    def _row_hash(self, row: List[str]) -> str:
+        """Рахує стабільний хеш рядка."""
+        norm = "|".join((cell or "").strip() for cell in row)
+        return hashlib.sha256(norm.encode("utf-8")).hexdigest()
+
+    def get_latest_revision_info(
+        self, sheet_id: str, filter_email: str
+    ) -> Optional[Dict[str, Any]]:
         """Повертає дані про останню ревізію (id/час/користувач)."""
-        return self.svc_drive.get_latest_revision_info(sheet_id)
+        return self.svc_drive.get_latest_revision_info(sheet_id, filter_email)
+
+    def fetch_revisions(self, sheet_id: str) -> List[dict]:
+        """Отримує метадані ревізій напряму з Sheets API (undocumented)."""
+        service: GoogleSheetsService = build(
+            "sheets", "v4", credentials=get_credentials(), cache_discovery=False
+        )
+        resp = service.spreadsheets().get(spreadsheetId=sheet_id).execute()
+        return resp.get("revisionMetadata", [])
+
+    def fetch_sheet_data(
+        self, sheet_id: str, sheet_title: str = REQUEST_SHEET_TITLE
+    ) -> List[List[str]]:
+        """Читає всі дані з листа (без хедерів)."""
+        service = build(
+            "sheets", "v4", credentials=get_credentials(), cache_discovery=False
+        )
+        resp = (
+            service.spreadsheets()
+            .values()
+            .get(
+                spreadsheetId=sheet_id,
+                range=f"{sheet_title}!A2:Z",  # пропускаємо заголовки
+            )
+            .execute()
+        )
+        return resp.get("values", [])
+
+    # def get_latest_revision_info(self, sheet_id: str) -> Optional[Dict[str, Any]]:
+    #     """Повертає дані про останню ревізію (id/час/користувач)."""
+    #     return self.svc_drive.get_latest_revision_info(sheet_id)
 
     def file_exists(self, file_id: str) -> bool:
         """Перевіряє, чи існує файл у Google Drive."""

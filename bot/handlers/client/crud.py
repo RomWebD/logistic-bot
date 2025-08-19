@@ -6,7 +6,7 @@ from aiogram.types import (
     InlineKeyboardMarkup,
     InlineKeyboardButton,
 )
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 from bot.models.client import SheetStatus
 from bot.models.sheet_binding import SheetBinding, SheetKind
@@ -82,6 +82,15 @@ async def get_client_by_telegram_id(
             select(Client).where(Client.telegram_id == telegram_id)
         )
         return res.scalar_one_or_none()
+
+
+async def get_all_clients_with_sheets() -> List[Client]:
+    """Повертає всіх клієнтів, у кого є Google Sheet (id не NULL)."""
+    async with get_session() as session:
+        res = await session.execute(
+            select(Client).where(Client.google_sheet_id.isnot(None))
+        )
+        return res.scalars().all()
 
 
 async def update_client_sheet_by_telegram(

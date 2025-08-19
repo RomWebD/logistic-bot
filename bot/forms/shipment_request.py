@@ -7,7 +7,11 @@ from bot.database.database import get_session
 from bot.models.shipment_request import Shipment_request
 
 # Celery таска: забезпечити файл і дописати рядок
-from bot.services.celery.tasks import append_request_to_sheet
+from bot.services.celery.tasks import (
+    append_request_to_sheet,
+    check_client_sheet_revisions,
+    sync_client_requests_from_sheet,
+)
 from aiogram.types import Message
 
 
@@ -149,3 +153,5 @@ class ShipmentRequestForm(BaseForm):
 
             # фонова Celery-таска: забезпечити файл і додати рядок
             append_request_to_sheet.delay(tg_id=tg_id, request_id=req.id)
+            # sync_client_requests_from_sheet.delay(tg_id=tg_id)
+            check_client_sheet_revisions.delay()

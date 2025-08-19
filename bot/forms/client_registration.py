@@ -18,7 +18,6 @@ from bot.schemas.client import (
     validate_website_input,
 )
 from aiogram.types import Message
-from aiogram.enums import ParseMode
 
 from bot.ui.keyboards import client_main_kb
 

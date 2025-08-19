@@ -25,3 +25,7 @@ def ensure_client_sheet_binding(tg_id: int, sheet_id: str, sheet_url: str):
 
 def get_request_by_id(request_id: int):
     return run(crud.get_request_by_id(request_id))
+
+
+def get_all_clients_with_sheets():
+    return run(crud.get_all_clients_with_sheets())

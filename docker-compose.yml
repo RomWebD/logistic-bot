@@ -23,7 +23,28 @@ services:
   celery_worker:
     build: .
     container_name: celery_worker
-    command: celery -A bot.celery_app.celery_app worker --loglevel=info
+    command: python celery_dev_runner.py
+    volumes:
+      - .:/app
+      - ./local.db:/app/local.db
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DEBUG=1
+      - REDIS_URL=redis://redis:6379/0
+      - REDIS_BOT_URL=redis://redis_bot:6379/0
+    ports:
+      - "5679:5679"
+    depends_on:
+      - redis
+      - redis_bot
+    restart: unless-stopped
+
+
+
+  celery_beat:
+    build: .
+    container_name: celery_beat
+    command: celery -A bot.celery_app.celery_app beat --loglevel=info
     volumes:
       - .:/app
       - ./local.db:/app/local.db
@@ -35,6 +56,21 @@ services:
       - redis
       - redis_bot
     restart: unless-stopped
+  # celery_worker:
+  #   build: .
+  #   container_name: celery_worker
+  #   command: celery -A bot.celery_app.celery_app worker --loglevel=info
+  #   volumes:
+  #     - .:/app
+  #     - ./local.db:/app/local.db
+  #   environment:
+  #     - PYTHONUNBUFFERED=1
+  #     - REDIS_URL=redis://redis:6379/0
+  #     - REDIS_BOT_URL=redis://redis_bot:6379/0
+  #   depends_on:
+  #     - redis
+  #     - redis_bot
+  #   restart: unless-stopped
 
   redis:
     image: redis:7-alpine

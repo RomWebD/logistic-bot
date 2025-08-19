@@ -89,3 +89,56 @@ def notify_carriers_task(request_id: int):
         # notifier теж кладе повідомлення в Redis, не чіпає bot напряму
         for carrier_id in req.target_carriers:
             queue_bot_message(carrier_id, f"🆕 Нова заявка {req.title}")
+
+
+@celery_app.task(name="sync_client_requests_from_sheet")
+def sync_client_requests_from_sheet(tg_id: int):
+    client = crud.get_client_by_telegram_id(tg_id)  # 👈 синхронний варіант
+    if not client or not client.google_sheet_id:
+        return
+
+    mgr = RequestSheetManager()
+    rev = mgr.fetch_revisions(client.google_sheet_id)
+    if not rev:
+        return
+
+
+@celery_app.task(name="check_client_sheet_revisions")
+def check_client_sheet_revisions():
+    """
+    Таска: перевіряє останні ревізії таблиць клієнтів.
+    Поки що лише збирає інформацію (хто і коли вніс зміни).
+    """
+    mgr = RequestSheetManager()
+    changes = []
+
+    clients = crud.get_all_clients_with_sheets()  # 👈 синхронний варіант
+    for client in clients:
+        revisions = None
+        # revisions = mgr.fetch_revisions(client.google_sheet_id)
+        attempt = mgr.get_latest_revision_info(client.google_sheet_id, client.email)
+        if not revisions:
+            return
+
+        latest = max(revisions, key=lambda r: r.get("id", "0"))
+
+        # якщо ми вже знаємо цю ревізію → скіпаємо
+        if (
+            client.last_sheet_revision_id
+            and latest["id"] == client.last_sheet_revision_id
+        ):
+            return
+
+        change_info = {
+            "client_id": client.id,
+            "client_name": client.full_name,
+            "sheet_id": client.google_sheet_id,
+            "revision_id": latest.get("id"),
+            "time": latest.get("timeOfRevision"),
+            "user": latest.get("lastModifyingUser", {}),
+        }
+        changes.append(change_info)
+
+        print(f"[REVISION] {change_info}")
+
+    return changes
