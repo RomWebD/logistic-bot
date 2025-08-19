@@ -7,9 +7,8 @@ from bot.forms.client_registration import ClientRegistrationForm
 from bot.forms.aiogram_adapter import FormRouter
 
 router = Router()
+client_form_router = FormRouter(ClientRegistrationForm(), prefix="client")
 
-client_form = ClientRegistrationForm()
-client_form_router = FormRouter(client_form)
 router.include_router(client_form_router.router)
 
 
@@ -20,8 +19,12 @@ async def start_client_registration(callback: CallbackQuery, state: FSMContext):
         "🧑‍💼 Почнемо реєстрацію клієнта?",
         reply_markup=InlineKeyboardMarkup(
             inline_keyboard=[
-                [InlineKeyboardButton(text="✅ Почати", callback_data="form_start")],
-                [InlineKeyboardButton(text="❌ Скасувати", callback_data="form_cancel")],
+                [InlineKeyboardButton(text="✅ Почати", callback_data="client:start")],
+                [
+                    InlineKeyboardButton(
+                        text="❌ Скасувати", callback_data="client:cancel"
+                    )
+                ],
             ]
         ),
     )

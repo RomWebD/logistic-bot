@@ -17,6 +17,11 @@ from bot.schemas.client import (
     validate_tax_id_input,
     validate_website_input,
 )
+from aiogram.types import Message
+from aiogram.enums import ParseMode
+
+from bot.ui.keyboards import client_main_kb
+
 
 def _not_empty(v: Any) -> str | None:
     if not v or (isinstance(v, str) and not v.strip()):
@@ -33,7 +38,7 @@ class ClientRegistrationForm(BaseForm):
             name="full_name",
             title="ПІБ",
             kind="text",
-            prompt="👤 Введіть ваше ПІБ:",
+            prompt="👤 Введіть ваше ПІБ (приклад: <code>Петро Василишин</code>):",
             validator=lambda v: validate_full_name_input(v)[1],
         ),
         FormField(
@@ -47,39 +52,38 @@ class ClientRegistrationForm(BaseForm):
             name="email",
             title="Email",
             kind="text",
-            prompt="📧 Введіть вашу електронну пошту:",
+            prompt="📧 Введіть вашу електронну пошту (напр.: <code>name@example.com</code>):",
             validator=lambda v: validate_email_input(v)[1],
         ),
         FormField(
             name="company_name",
             title="Компанія",
             kind="text",
-            prompt="🏢 Введіть назву компанії:",
+            prompt="🏢 Введіть назву компанії (приклад: <code>ТОВ Кронтехно</code> або <code>ФОП Петришин Петро</code>):",
             validator=lambda v: validate_company_name_input(v)[1],
         ),
         FormField(
             name="tax_id",
             title="ЄДРПОУ / ІПН",
             kind="text",
-            prompt="🆔 Введіть ЄДРПОУ (8 цифр) або ІПН (10 цифр):",
+            prompt="🆔 Введіть ЄДРПОУ (8 цифр) або ІПН (10 цифр) (приклад: <code>12345678</code>):",
             validator=lambda v: validate_tax_id_input(v)[1],
         ),
         FormField(
             name="address",
             title="Адреса",
             kind="text",
-            prompt="📍 Введіть адресу офісу (можна скорочено):",
+            prompt="📍 Введіть адресу офісу (приклад: <code>Івано-Франківськ</code>):",
             validator=_not_empty,
         ),
         FormField(
             name="website",
             title="Сайт",
             kind="text",
-            prompt="🔗 Введіть сайт компанії або '-' якщо немає:",
+            prompt="🔗 Введіть сайт компанії або '-' якщо немає (приклад: <code>https://google.com</code>):",
             validator=lambda v: validate_website_input(v)[1],
         ),
     ]
-
     icons = {
         "full_name": "👤",
         "phone": "📞",
@@ -90,14 +94,16 @@ class ClientRegistrationForm(BaseForm):
         "website": "🔗",
     }
 
-    async def on_submit(self, data: Dict[str, Any]):
-        telegram_id = data.get("tg_id")
-        if telegram_id is None:
-            raise RuntimeError("tg_id is required in state data for ClientRegistrationForm")
 
-        # Перевірка чи вже є клієнт
+    async def on_submit(self, data: dict, message: Message):
+        telegram_id = data.get("tg_id")
+        if not telegram_id:
+            await message.answer("❌ Помилка: відсутній telegram_id")
+            return
+
         if await check_existing_client(telegram_id):
-            return "⚠️ Ви вже зареєстровані як клієнт."
+            await message.answer("⚠️ Ви вже зареєстровані як клієнт.")
+            return
 
         payload = ClientRegistrationData(
             telegram_id=telegram_id,
@@ -112,9 +118,21 @@ class ClientRegistrationForm(BaseForm):
 
         success = await register_new_client(payload)
         if not success:
-            return "⚠️ Клієнт з таким номером або поштою вже існує."
+            await message.answer("⚠️ Клієнт з таким номером або поштою вже існує.")
+            return
 
-        return (
+        # ✨ Оновлення summary (опційно)
+        try:
+            await message.edit_text(
+                self.build_summary(data, include_progress=False),
+                parse_mode="HTML"
+            )
+        except Exception:
+            pass
+
+        # Надсилаємо головне меню
+        await message.answer(
             "✅ Реєстрація клієнта успішна!\n"
-            "⚠️ Ви ще не верифіковані. Зачекайте підтвердження."
+            "⚠️ Ви ще не верифіковані. Зачекайте підтвердження або зверніться до адміністратора.",
+            reply_markup=client_main_kb(is_verified=False),
         )

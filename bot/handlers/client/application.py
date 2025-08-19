@@ -8,8 +8,8 @@ from bot.forms.aiogram_adapter import FormRouter
 router = Router()
 
 # створюємо форму та підключаємо її роутер
-shipment_form = ShipmentRequestForm()
-shipment_form_router = FormRouter(shipment_form)
+shipment_form_router = FormRouter(ShipmentRequestForm(), prefix="request")
+
 router.include_router(shipment_form_router.router)
 
 
@@ -26,14 +26,17 @@ async def start_client_application(callback: CallbackQuery, state: FSMContext):
         "📝 Бажаєте створити нову заявку на перевезення?",
         reply_markup=InlineKeyboardMarkup(
             inline_keyboard=[
-                [InlineKeyboardButton(text="✅ Почати", callback_data="form_start")],
                 [
                     InlineKeyboardButton(
-                        text="❌ Скасувати", callback_data="form_cancel"
+                        text="✅ Почати", callback_data="request:form_start"
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        text="❌ Скасувати", callback_data="request:form_cancel"
                     )
                 ],
             ]
         ),
     )
     await callback.answer()
-

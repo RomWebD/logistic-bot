@@ -1,7 +1,8 @@
-
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Sequence, Tuple
+from aiogram.types import Message
+
 
 @dataclass
 class FormField:
@@ -15,6 +16,7 @@ class FormField:
     normalizer: Optional[Callable[[str], Any]] = None
     # валідація: значення -> помилка або None
     validator: Optional[Callable[[Any], Optional[str]]] = None
+
 
 class BaseForm:
     """
@@ -34,7 +36,9 @@ class BaseForm:
     # map[field_name] = icon (для summary)
     icons: Dict[str, str] = {}
 
-    async def on_submit(self, data: Dict[str, Any]) -> Awaitable[None]:
+    async def on_submit(
+        self, data: Dict[str, Any], message: Message
+    ) -> Awaitable[None]:
         """
         Перевизнач у конкретній формі — що робити при збереженні.
         Напр., збереження у БД + Celery-таски.

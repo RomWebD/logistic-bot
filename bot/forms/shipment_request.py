@@ -8,6 +8,7 @@ from bot.models.shipment_request import Shipment_request
 
 # Celery таска: забезпечити файл і дописати рядок
 from bot.services.celery.tasks import append_request_to_sheet
+from aiogram.types import Message
 
 
 def _not_empty(v: Any) -> str | None:
@@ -116,7 +117,7 @@ class ShipmentRequestForm(BaseForm):
         "price": "💰",
     }
 
-    async def on_submit(self, data: Dict[str, Any]):
+    async def on_submit(self, data: dict, message: Message):
         """
         1) зберігаємо в БД Shipment_request
         2) фоном: ensure Google Sheet (+оновити БД, якщо файл створився новий) і додати рядок
