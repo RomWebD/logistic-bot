@@ -89,7 +89,7 @@ async def save_car(callback: CallbackQuery, state: FSMContext):
         )
 
         # Запис у БД
-        async for session in get_session():
+        async with get_session() as session:
             session.add(vehicle)
             session.add(carrier)
             await session.commit()

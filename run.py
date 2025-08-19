@@ -1,9 +1,11 @@
 import asyncio
+import os
+
 from bot.main import main as bot_main
 from bot.database.database import engine, Base
 import bot.models
+from bot.services.celery.redis_consumer import redis_bot_consumer
 
-import os
 
 if os.getenv("DEBUG") == "1":
     import debugpy
@@ -19,7 +21,11 @@ async def init_db():
 
 async def run():
     await init_db()
-    await bot_main()
+    # запускаємо бот + redis worker паралельно
+    await asyncio.gather(
+        bot_main(),
+        redis_bot_consumer(),
+    )
 
 
 if __name__ == "__main__":

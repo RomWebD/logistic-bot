@@ -9,7 +9,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 
 async def notify_carriers(bot: Bot, request: Shipment_request):
-    async for session in get_session():
+    async with get_session() as session:
         carriers = await session.scalars(
             select(CarrierCompany).where(CarrierCompany.from_city == request.from_city)
         )

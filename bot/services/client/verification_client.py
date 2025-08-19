@@ -12,7 +12,7 @@ class ClientStatus(Enum):
 
 
 async def get_client_status(telegram_id: int) -> ClientStatus:
-    async for session in get_session():
+    async with get_session() as session:
         client = await session.scalar(
             select(Client).where(Client.telegram_id == telegram_id)
         )

@@ -46,9 +46,7 @@ async def handle_client_check_status(callback: CallbackQuery):
         try:
             await callback.bot.set_my_commands(
                 commands=[
-                    BotCommand(command="new", description="Створити заявку"),
-                    BotCommand(command="profile", description="Мій профіль"),
-                    BotCommand(command="help", description="Допомога"),
+                    BotCommand(command="client_menu", description="Меню клієнта"),
                 ],
                 scope=BotCommandScopeChat(chat_id=tg_id),
             )

@@ -11,7 +11,7 @@ class CarrierStatus(Enum):
 
 
 async def get_carrier_status(telegram_id: int) -> CarrierStatus:
-    async for session in get_session():
+    async with get_session() as session:
         carrier = await session.scalar(
             select(CarrierCompany).where(CarrierCompany.telegram_id == telegram_id)
         )
@@ -23,7 +23,7 @@ async def get_carrier_status(telegram_id: int) -> CarrierStatus:
 
 
 async def is_verified_carrier(chat_id: int) -> bool:
-    async for session in get_session():
+    async with get_session() as session:
         result = await session.scalar(
             select(CarrierCompany).where(
                 CarrierCompany.telegram_id == chat_id,
@@ -34,14 +34,14 @@ async def is_verified_carrier(chat_id: int) -> bool:
 
 
 async def get_carrier_by_telegram_id(telegram_id: int) -> CarrierCompany | None:
-    async for session in get_session():
+    async with get_session() as session:
         return await session.scalar(
             select(CarrierCompany).where(CarrierCompany.telegram_id == telegram_id)
         )
 
 
 async def delete_carrier_by_telegram_id(telegram_id: int, callback) -> bool:
-    async for session in get_session():
+    async with get_session() as session:
         carrier = await session.scalar(
             select(CarrierCompany).where(CarrierCompany.telegram_id == telegram_id)
         )

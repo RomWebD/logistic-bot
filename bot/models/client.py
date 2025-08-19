@@ -1,7 +1,15 @@
 # bot/database/models.py
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy import String, Integer, BigInteger, Boolean, text
+from sqlalchemy import String, Integer, BigInteger, Boolean, text, Enum
 from bot.database.database import Base
+import enum
+
+
+class SheetStatus(str, enum.Enum):
+    PENDING = "pending"
+    READY = "ready"
+    FAILED = "failed"
+    NONE = "none"
 
 
 class Client(Base):
@@ -28,4 +36,7 @@ class Client(Base):
     )
     google_sheet_id: Mapped[str | None] = mapped_column(
         String(512), nullable=True, comment="URL до Google Sheets із заявками"
+    )
+    sheet_status: Mapped[str] = mapped_column(
+        Enum(SheetStatus), default=SheetStatus.NONE, nullable=False
     )

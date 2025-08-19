@@ -118,7 +118,7 @@ async def finish_company_registration(message: Message, state: FSMContext):
     data = await state.get_data()
     telegram_id = message.from_user.id
 
-    async for session in get_session():
+    async with get_session() as session:
         existing = await session.scalar(
             select(CarrierCompany).where(CarrierCompany.phone == data["phone"])
         )

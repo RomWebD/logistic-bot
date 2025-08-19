@@ -12,7 +12,7 @@ class Shipment_request(Base):
     __tablename__ = "shipment_request"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    client_telegram_id: Mapped[int] = mapped_column( index=True)
+    client_telegram_id: Mapped[int] = mapped_column(index=True)
     from_city: Mapped[str] = mapped_column(String)
     to_city: Mapped[str] = mapped_column(String)
 

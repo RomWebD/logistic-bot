@@ -7,14 +7,17 @@ services:
     command: python dev_runner.py
     volumes:
       - .:/app
+      - ./local.db:/app/local.db
     environment:
       - PYTHONUNBUFFERED=1
       - DEBUG=1
-      - REDIS_URL=redis://redis:6379/0
+      - REDIS_URL=redis://redis:6379/0          # Celery Redis
+      - REDIS_BOT_URL=redis://redis_bot:6379/0  # 👈 окремий для бот-черги
     ports:
       - "5678:5678"
     depends_on:
       - redis
+      - redis_bot
     restart: unless-stopped
 
   celery_worker:
@@ -23,16 +26,22 @@ services:
     command: celery -A bot.celery_app.celery_app worker --loglevel=info
     volumes:
       - .:/app
+      - ./local.db:/app/local.db
     environment:
       - PYTHONUNBUFFERED=1
       - REDIS_URL=redis://redis:6379/0
+      - REDIS_BOT_URL=redis://redis_bot:6379/0
     depends_on:
       - redis
+      - redis_bot
     restart: unless-stopped
 
   redis:
     image: redis:7-alpine
     container_name: redis
-    ports:
-      - "6379:6379"
+    restart: unless-stopped
+
+  redis_bot:
+    image: redis:7-alpine
+    container_name: redis_bot
     restart: unless-stopped

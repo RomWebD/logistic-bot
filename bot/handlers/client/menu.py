@@ -7,6 +7,8 @@ from bot.handlers.carrier_company.car_registration.fsm_helpers import (
 from aiogram.fsm.context import FSMContext
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from bot.handlers.client import crud
+from bot.models.client import SheetStatus
+from bot.services.celery.task_tracker import is_sheet_job_active
 from bot.services.google_services.sheets_client import RequestSheetManager
 from bot.services.celery.tasks import ensure_client_request_sheet
 
@@ -54,6 +56,13 @@ async def show_client_menu(target: Message | CallbackQuery):
         )
 
 
+@router.message(F.text == "/client_menu")
+@require_verified_client()
+async def handle_menu_command(message: Message, state: FSMContext):
+    await state.clear()
+    await show_client_menu(message)
+
+
 @router.callback_query(F.data == "client_menu")
 @require_verified_client()
 async def handle_menu_callback(callback: CallbackQuery, state: FSMContext):
@@ -72,7 +81,6 @@ async def handle_my_requests(message: Message):
         await message.answer("⛔️ Ви ще не зареєстровані як клієнт.")
         return
 
-    # якщо клієнт ще не створював заявки
     total = await crud.count_requests_by_telegram(telegram_id)
     if total == 0:
         kb = InlineKeyboardMarkup(
@@ -90,27 +98,40 @@ async def handle_my_requests(message: Message):
         )
         return
 
-    # якщо Google Sheet ще не створений → запускаємо таску
-    if not client.google_sheet_url:
+    # 🔹 Перевірка Redis-локу
+    if is_sheet_job_active(telegram_id):
         await message.answer(
-            "⏳ Формуємо ваш Google Sheet із заявками. Це може зайняти кілька секунд..."
+            "⏳ Ваш Google Sheet формується, зачекайте кілька секунд..."
+        )
+        return
+
+    # 🔹 Перевірка статусу у БД
+    if client.sheet_status == SheetStatus.READY and client.google_sheet_url:
+        kb = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text="🔗 Мої заявки", url=client.google_sheet_url
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        text="✍️ Створити нову заявку",
+                        callback_data="client_application",
+                    )
+                ],
+            ]
+        )
+        await message.answer("🔗 Ваші заявки:", reply_markup=kb)
+        return
+
+    if client.sheet_status == SheetStatus.FAILED:
+        await message.answer(
+            "⚠️ Сталася помилка при створенні Google Sheet. Спробуйте ще раз."
         )
         ensure_client_request_sheet.delay(telegram_id)
         return
 
-    # якщо Google Sheet вже існує → показуємо кнопки
-    kb = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text="🔗 Відкрити заявки", url=client.google_sheet_url
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    text="✍️ Створити нову заявку", callback_data="client_application"
-                )
-            ],
-        ]
-    )
-    await message.answer("🔗 Ваші заявки:", reply_markup=kb)
+    # 🔹 Якщо статус NONE або URL відсутній → запускаємо створення
+    await message.answer("⏳ Формуємо ваш Google Sheet із заявками...")
+    ensure_client_request_sheet.delay(telegram_id)

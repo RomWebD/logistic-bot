@@ -6,7 +6,7 @@ from bot.schemas.client import ClientRegistrationData
 
 
 async def check_existing_client(telegram_id: int) -> bool:
-    async for session in get_session():
+    async with get_session() as session:
         existing = await session.scalar(
             select(Client).where(Client.telegram_id == telegram_id)
         )
@@ -14,7 +14,7 @@ async def check_existing_client(telegram_id: int) -> bool:
 
 
 async def register_new_client(data: ClientRegistrationData) -> bool:
-    async for session in get_session():
+    async with get_session() as session:
         # Перевірка дубля по телефону/емейлу
         exists = await session.scalar(
             select(Client).where(

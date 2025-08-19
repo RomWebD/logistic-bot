@@ -8,6 +8,7 @@ from aiogram.types import (
 )
 from typing import Optional, Tuple
 
+from bot.models.client import SheetStatus
 from bot.models.sheet_binding import SheetBinding, SheetKind
 from bot.models.shipment_request import Shipment_request
 
@@ -44,7 +45,7 @@ async def sync_requests_from_sheets(client: Client):
     if not rows:
         return 0  # нічого немає
 
-    async for session in get_session():
+    async with get_session() as session:
         for row in rows:
             # перетворюємо рядок у модель
             req = Shipment_request(
@@ -66,26 +67,27 @@ async def sync_requests_from_sheets(client: Client):
     return len(rows)
 
 
+# ✅ Універсальна функція для отримання клієнта
 async def get_client_by_telegram_id(
     telegram_id: int, session: AsyncSession | None = None
 ) -> Optional[Client]:
-    own = False
-    if session is None:
-        own = True
-        async for session in get_session():
-            break
+    if session is not None:
+        res = await session.execute(
+            select(Client).where(Client.telegram_id == telegram_id)
+        )
+        return res.scalar_one_or_none()
 
-    res = await session.execute(select(Client).where(Client.telegram_id == telegram_id))
-    client = res.scalar_one_or_none()
-
-    if own:
-        await session.close()
-
-    return client
+    async with get_session() as session:
+        res = await session.execute(
+            select(Client).where(Client.telegram_id == telegram_id)
+        )
+        return res.scalar_one_or_none()
 
 
-async def update_client_sheet_by_telegram(telegram_id: int, sheet_id: str, sheet_url: str) -> None:
-    async for session in get_session():
+async def update_client_sheet_by_telegram(
+    telegram_id: int, sheet_id: str, sheet_url: str
+) -> None:
+    async with get_session() as session:
         await session.execute(
             update(Client)
             .where(Client.telegram_id == telegram_id)
@@ -95,7 +97,7 @@ async def update_client_sheet_by_telegram(telegram_id: int, sheet_id: str, sheet
 
 
 async def count_requests_by_telegram(telegram_id: int) -> int:
-    async for session in get_session():
+    async with get_session() as session:
         res = await session.execute(
             select(func.count(Shipment_request.id)).where(
                 Shipment_request.client_telegram_id == telegram_id
@@ -107,43 +109,43 @@ async def count_requests_by_telegram(telegram_id: int) -> int:
 async def get_request_by_id(
     request_id: int, session: AsyncSession | None = None
 ) -> Optional[Shipment_request]:
-    own = False
-    if session is None:
-        own = True
-        async for session in get_session():
-            break
+    """
+    Повертає Shipment_request за ID.
+    Якщо сесія передана ззовні — використовує її, інакше створює власну.
+    """
+    if session is not None:
+        res = await session.execute(
+            select(Shipment_request).where(Shipment_request.id == request_id)
+        )
+        return res.scalar_one_or_none()
 
-    res = await session.execute(
-        select(Shipment_request).where(Shipment_request.id == request_id)
-    )
-    req = res.scalar_one_or_none()
+    # якщо сесію не передали — створюємо власну
+    async with get_session() as session:
+        res = await session.execute(
+            select(Shipment_request).where(Shipment_request.id == request_id)
+        )
+        return res.scalar_one_or_none()
 
-    if own:
-        await session.close()
-
-    return req
 
 async def get_client_and_request(
     telegram_id: int,
     request_id: int,
     session: AsyncSession | None = None,
 ) -> Tuple[Optional[Client], Optional[Shipment_request]]:
-    own = False
     if session is None:
-        own = True
-        async for session in get_session():
-            break
+        async with get_session() as session:
+            return await get_client_and_request(telegram_id, request_id, session)
 
-    res_c = await session.execute(select(Client).where(Client.telegram_id == telegram_id))
-    client = res_c.scalar_one_or_none()
+    client = await get_client_by_telegram_id(telegram_id, session=session)
 
-    res_r = await session.execute(select(Shipment_request).where(Shipment_request.id == request_id))
+    res_r = await session.execute(
+        select(Shipment_request).where(Shipment_request.id == request_id)
+    )
     req = res_r.scalar_one_or_none()
 
-    if own:
-        await session.close()
-
     return client, req
+
+
 async def mark_sheet_opened(
     tg_id: int,
     sheet_kind: Literal["requests", "vehicles"],
@@ -160,7 +162,7 @@ async def mark_sheet_opened(
 
     Якщо биндингу ще не існує — створює його (sheet_id/url підтягне з Client).
     """
-    async for session in get_session():
+    async with get_session() as session:
         # 1) знайдемо/створимо binding
         binding: Optional[SheetBinding] = await session.scalar(
             select(SheetBinding).where(
@@ -219,7 +221,7 @@ async def update_binding_after_sync(
     :param mark_not_in_progress: зняти прапор sync_in_progress (дефолт: так)
     """
 
-    async for session in get_session():
+    async with get_session() as session:
         binding = await session.get(SheetBinding, binding_id)
         if not binding:
             raise ValueError(f"SheetBinding id={binding_id} not found")
@@ -236,6 +238,7 @@ async def update_binding_after_sync(
         await session.refresh(binding)
         return binding
 
+
 async def ensure_client_sheet_binding(
     telegram_id: int,
     new_sheet_id: str,
@@ -245,34 +248,51 @@ async def ensure_client_sheet_binding(
     """
     Повертає True, якщо значення змінились і ми оновили БД.
     """
-    own = False
     if session is None:
-        own = True
-        async for session in get_session():
-            break
+        async with get_session() as session:
+            return await ensure_client_sheet_binding(
+                telegram_id, new_sheet_id, new_sheet_url, session
+            )
 
-    res = await session.execute(select(Client).where(Client.telegram_id == telegram_id))
-    client = res.scalar_one_or_none()
+    client = await get_client_by_telegram_id(telegram_id, session=session)
     if not client:
-        if own:
-            await session.close()
         return False
 
-    if client.google_sheet_id != new_sheet_id or client.google_sheet_url != new_sheet_url:
+    if (
+        client.google_sheet_id != new_sheet_id
+        or client.google_sheet_url != new_sheet_url
+    ):
         await session.execute(
             update(Client)
             .where(Client.id == client.id)
             .values(google_sheet_id=new_sheet_id, google_sheet_url=new_sheet_url)
         )
         await session.commit()
-        changed = True
-    else:
-        changed = False
+        return True
 
-    if own:
-        await session.close()
+    return False
 
-    return changed
+
+async def update_sheet_status(
+    telegram_id: int,
+    status: SheetStatus,
+    url: str | None = None,
+    sheet_id: str | None = None,
+    session: AsyncSession = None,
+):
+    stmt = (
+        update(Client)
+        .where(Client.telegram_id == telegram_id)
+        .values(
+            sheet_status=status,
+            google_sheet_url=url,
+            google_sheet_id=sheet_id,
+        )
+    )
+    await session.execute(stmt)
+    await session.commit()
+
+
 # utils.py або crud.py
 def build_vehicle_sheet_markup(sheet_url: str) -> InlineKeyboardMarkup:
     if sheet_url:

@@ -20,7 +20,7 @@ async def main():
         price=8000,
     )
 
-    async for session in get_session():
+    async with get_session() as session:
         session.add(fake)
         await session.commit()
 

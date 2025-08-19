@@ -7,7 +7,7 @@ from bot.database.database import get_session
 from bot.models.shipment_request import Shipment_request
 
 # Celery таска: забезпечити файл і дописати рядок
-from bot.services.celery.tasks import ensure_sheet_and_append_request_row
+from bot.services.celery.tasks import append_request_to_sheet
 
 
 def _not_empty(v: Any) -> str | None:
@@ -128,7 +128,7 @@ class ShipmentRequestForm(BaseForm):
                 "tg_id is required in state data for ShipmentRequestForm"
             )
 
-        async for session in get_session():
+        async with get_session() as session:
             req = Shipment_request(
                 client_telegram_id=tg_id,
                 from_city=data.get("from_city"),
@@ -147,4 +147,4 @@ class ShipmentRequestForm(BaseForm):
             await session.refresh(req)
 
             # фонова Celery-таска: забезпечити файл і додати рядок
-            ensure_sheet_and_append_request_row.delay(tg_id=tg_id, request_id=req.id)
+            append_request_to_sheet.delay(tg_id=tg_id, request_id=req.id)

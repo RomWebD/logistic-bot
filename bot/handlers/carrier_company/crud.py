@@ -8,7 +8,7 @@ from aiogram.types import (
 
 
 async def get_sheet_url_by_telegram_id(telegram_id: int) -> str | None:
-    async for session in get_session():
+    async with get_session() as session:
         result = await session.execute(
             select(CarrierCompany.google_sheet_url).where(
                 CarrierCompany.telegram_id == telegram_id
