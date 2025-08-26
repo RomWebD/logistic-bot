@@ -7,11 +7,11 @@ import bot.models
 from bot.services.celery.redis_consumer import redis_bot_consumer
 
 
-if os.getenv("DEBUG") == "1":
-    import debugpy
+# if os.getenv("DEBUG") == "1":
+#     import debugpy
 
-    debugpy.listen(("0.0.0.0", 5678))
-    print("🪲 Debugger attached on port 5678")
+#     debugpy.listen(("0.0.0.0", 5678))
+#     print("🪲 Debugger attached on port 5678")
 
 
 async def init_db():
@@ -24,7 +24,7 @@ async def run():
     # запускаємо бот + redis worker паралельно
     await asyncio.gather(
         bot_main(),
-        redis_bot_consumer(),
+        # redis_bot_consumer(),
     )
 
 

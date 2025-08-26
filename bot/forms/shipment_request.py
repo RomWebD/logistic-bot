@@ -14,6 +14,8 @@ from bot.services.celery.tasks import (
 )
 from aiogram.types import Message
 
+from bot.services.google_services.sheets_client import RequestSheetManager
+
 
 def _not_empty(v: Any) -> str | None:
     if v is None or (isinstance(v, str) and not v.strip()):
@@ -152,6 +154,8 @@ class ShipmentRequestForm(BaseForm):
             await session.refresh(req)
 
             # фонова Celery-таска: забезпечити файл і додати рядок
-            append_request_to_sheet.delay(tg_id=tg_id, request_id=req.id)
-            # sync_client_requests_from_sheet.delay(tg_id=tg_id)
+            # append_request_to_sheet.delay(tg_id=tg_id, request_id=req.id)
+            
+            mgr = RequestSheetManager()
+
             check_client_sheet_revisions.delay()

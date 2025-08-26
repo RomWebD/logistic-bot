@@ -6,10 +6,10 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import String, Integer, Text, ForeignKey, Boolean
 from typing import Optional
 
-from bot.models_new.base import BaseModel, TimestampMixin
-from bot.models_new.carrier_company import CarrierCompany
-from bot.models_new.shipment_request import ShipmentRequest
-from bot.models_new.transport_vehicle import TransportVehicle
+from bot.models.base import BaseModel, TimestampMixin
+from bot.models.carrier_company import CarrierCompany
+from bot.models.shipment_request import ShipmentRequest
+from bot.models.transport_vehicle import TransportVehicle
 
 
 class ShipmentOffer(BaseModel, TimestampMixin):

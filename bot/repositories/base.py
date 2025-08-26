@@ -1,32 +1,17 @@
-# bot/repositories/base.py
-"""
-Базовий репозиторій - це клас, який інкапсулює всю роботу з БД.
-Замість писати SQL запити всюди, ми робимо це в одному місці.
-"""
-
 from typing import TypeVar, Generic, Type, Optional, List
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from bot.database.database import Base
 
-# TypeVar - це як шаблон, який дозволяє працювати з різними моделями
 ModelType = TypeVar("ModelType", bound=Base)
 
 
 class BaseRepository(Generic[ModelType]):
-    """
-    Базовий клас для всіх репозиторіїв.
-    Generic[ModelType] означає, що цей клас може працювати з будь-якою моделлю.
+    """Базовий клас для всіх репозиторіїв"""
 
-    Переваги ООП тут:
-    1. Не треба дублювати код для кожної моделі
-    2. Всі репозиторії матимуть однаковий інтерфейс
-    3. Легко додавати нову функціональність
-    """
-
-    def __init__(self, model: Type[ModelType], session: AsyncSession):
-        self.model = model  # Зберігаємо модель (Client, Carrier, etc.)
-        self.session = session  # Зберігаємо сесію БД
+    def __init__(self, session: AsyncSession, model: Type[ModelType]):
+        self.model = model
+        self.session = session
 
     async def create(self, **kwargs) -> ModelType:
         """Створити новий запис"""
@@ -42,6 +27,8 @@ class BaseRepository(Generic[ModelType]):
 
     async def get_by_telegram_id(self, telegram_id: int) -> Optional[ModelType]:
         """Отримати запис за Telegram ID"""
+        if not hasattr(self.model, "telegram_id"):
+            return None
         result = await self.session.execute(
             select(self.model).where(self.model.telegram_id == telegram_id)
         )
@@ -57,7 +44,8 @@ class BaseRepository(Generic[ModelType]):
         instance = await self.get_by_id(id)
         if instance:
             for key, value in kwargs.items():
-                setattr(instance, key, value)
+                if hasattr(instance, key):
+                    setattr(instance, key, value)
             await self.session.commit()
             await self.session.refresh(instance)
         return instance

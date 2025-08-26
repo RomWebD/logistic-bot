@@ -1,43 +1,36 @@
 """
 Схеми для клієнтів - це як TypeScript інтерфейси
 """
+
 from bot.schemas.base import BaseSchema, TimestampSchema
 from typing import Optional
 from pydantic import field_validator, EmailStr
 import re
+from pydantic import BaseModel, Field
+from bot.schemas.validators import PhoneValidatorMixin
 
 
-class ClientRegistrationData(BaseSchema):
-    """DTO для реєстрації клієнта"""
+"""
+Використання в схемах
+"""
+
+
+class ClientRegistrationData(BaseModel, PhoneValidatorMixin):
+    """DTO для реєстрації клієнта з валідацією телефону"""
+
     telegram_id: int
     full_name: str
-    phone: str
-    email: EmailStr
+    phone: str  # Буде автоматично валідуватись і форматуватись
+    email: str
     company_name: str
     tax_id: str
     address: str
-    website: Optional[str] = None
-    
-    @field_validator('phone')
-    @classmethod
-    def validate_phone(cls, v: str) -> str:
-        """Валідація телефону з Pydantic"""
-        cleaned = ''.join(filter(str.isdigit, v))
-        if len(cleaned) not in [10, 12]:
-            raise ValueError('Невірний формат телефону')
-        return cleaned
-    
-    @field_validator('tax_id')
-    @classmethod
-    def validate_tax_id(cls, v: str) -> str:
-        """Валідація ЄДРПОУ/ІПН"""
-        if not v.isdigit() or len(v) not in [8, 10]:
-            raise ValueError('ЄДРПОУ має бути 8 цифр, ІПН - 10 цифр')
-        return v
+    country_code: str = Field(default="UA", exclude=True)  # Для валідації телефону
 
 
 class ClientResponse(TimestampSchema):
     """Схема для відповіді з даними клієнта"""
+
     id: int
     telegram_id: int
     full_name: str

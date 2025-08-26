@@ -1,5 +1,0 @@
-from carrier_company import CarrierCompany
-from transport_vehicle import TransportVehicle
-from client import Client
-from shipment_request import ShipmentRequest
-from shipment_offer import ShipmentOffer

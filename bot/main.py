@@ -15,6 +15,10 @@ from bot.services.loader import bot
 from bot.handlers.carrier_company.car_registration import (
     routers as car_registration_routers,
 )
+from bot.middleware.database_middleware import RepositoryMiddleware
+import logging
+
+logging.basicConfig(level=logging.INFO)
 
 # sentry_sdk.init(
 #     dsn=config.SENTRY_DSN,
@@ -22,7 +26,8 @@ from bot.handlers.carrier_company.car_registration import (
 # )
 
 dp = Dispatcher()
-
+dp.message.middleware(RepositoryMiddleware())
+dp.callback_query.middleware(RepositoryMiddleware())
 dp.include_router(role_selection.router)
 dp.include_router(carrier_registration.router)
 dp.include_router(carrier_menu.router)

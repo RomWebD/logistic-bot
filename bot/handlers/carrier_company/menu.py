@@ -6,23 +6,44 @@ from aiogram.types import (
     CallbackQuery,
 )
 from aiogram.fsm.context import FSMContext
-
 from aiogram.filters import Command
-from bot.decorators.access import require_verified_carrier
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
-from bot.handlers.carrier_company import crud
+# КРОК 1: Імпортуємо репозиторії замість CRUD
 from bot.handlers.carrier_company.car_registration.fsm_helpers import (
     deactivate_inline_keyboard,
 )
+from bot.repositories.carrier_repository import CarrierRepository
+from bot.repositories.google_sheet_repository import GoogleSheetRepository
+
+# КРОК 2: Імпортуємо енами для типів
+from bot.models.google_sheets_binding import OwnerType, SheetType
+
+from bot.decorators.access import require_verified_carrier
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
 router = Router()
 
 
 @router.message(F.text == "🚚 Мої транспортні засоби")
-async def handle_vehicles_button(message: Message):
+async def handle_vehicles_button(
+    message: Message,
+    # КРОК 3: Отримуємо репозиторії з middleware
+    carrier_repo: CarrierRepository,  # Автоматично з RepositoryMiddleware
+    sheet_repo: GoogleSheetRepository,  # Теж автоматично
+):
     telegram_id = message.from_user.id
-    sheet_url = await crud.get_sheet_url_by_telegram_id(telegram_id)
+    carrier = await carrier_repo.get_by_telegram_id(telegram_id)
+    if not carrier:
+        # Перевізник не зареєстрований
+        await message.answer("❌ Ви не зареєстровані як перевізник")
+        return
+
+    sheet_binding = await sheet_repo.get_by_owner_and_type(
+        telegram_id=telegram_id,
+        owner_type=OwnerType.CARRIER,  # Тип власника - перевізник
+        sheet_type=SheetType.VEHICLES,  # Тип таблиці - автопарк
+    )
+    sheet_url = sheet_binding.sheet_url if sheet_binding else None
 
     if not sheet_url:
         await message.answer(
@@ -48,7 +69,7 @@ async def handle_vehicles_button(message: Message):
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="Відкрити автопарк",
+                    text="📊 Відкрити автопарк",
                     url=sheet_url,
                 )
             ],
@@ -61,8 +82,11 @@ async def handle_vehicles_button(message: Message):
         ]
     )
 
+    vehicles_count = carrier.total_vehicles if hasattr(carrier, "total_vehicles") else 0
+
     await message.answer(
-        "🔗 Натисніть кнопку нижче, щоб переглянути ваш автопарк:",
+        f"🚚 Ваш автопарк ({vehicles_count} транспортних засобів)\n\n"
+        "🔗 Натисніть кнопку нижче для перегляду:",
         reply_markup=inline_keyboard,
     )
 

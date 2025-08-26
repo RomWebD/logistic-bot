@@ -8,9 +8,9 @@ from aiogram.types import (
 )
 from typing import List, Optional, Tuple
 
-from bot.models.client import SheetStatus
+from bot.models import SheetStatus
 from bot.models.sheet_binding import SheetBinding, SheetKind
-from bot.models.shipment_request import Shipment_request
+from bot.models import ShipmentRequest
 
 from typing import Literal
 from bot.services.google_services.sheets_client import RequestSheetManager
@@ -48,7 +48,7 @@ async def sync_requests_from_sheets(client: Client):
     async with get_session() as session:
         for row in rows:
             # перетворюємо рядок у модель
-            req = Shipment_request(
+            req = ShipmentRequest(
                 client_telegram_id=client.telegram_id,
                 from_city=row[0],
                 to_city=row[1],
@@ -108,8 +108,8 @@ async def update_client_sheet_by_telegram(
 async def count_requests_by_telegram(telegram_id: int) -> int:
     async with get_session() as session:
         res = await session.execute(
-            select(func.count(Shipment_request.id)).where(
-                Shipment_request.client_telegram_id == telegram_id
+            select(func.count(ShipmentRequest.id)).where(
+                ShipmentRequest.client_telegram_id == telegram_id
             )
         )
         return int(res.scalar() or 0)
@@ -117,21 +117,21 @@ async def count_requests_by_telegram(telegram_id: int) -> int:
 
 async def get_request_by_id(
     request_id: int, session: AsyncSession | None = None
-) -> Optional[Shipment_request]:
+) -> Optional[ShipmentRequest]:
     """
-    Повертає Shipment_request за ID.
+    Повертає ShipmentRequest за ID.
     Якщо сесія передана ззовні — використовує її, інакше створює власну.
     """
     if session is not None:
         res = await session.execute(
-            select(Shipment_request).where(Shipment_request.id == request_id)
+            select(ShipmentRequest).where(ShipmentRequest.id == request_id)
         )
         return res.scalar_one_or_none()
 
     # якщо сесію не передали — створюємо власну
     async with get_session() as session:
         res = await session.execute(
-            select(Shipment_request).where(Shipment_request.id == request_id)
+            select(ShipmentRequest).where(ShipmentRequest.id == request_id)
         )
         return res.scalar_one_or_none()
 
@@ -140,7 +140,7 @@ async def get_client_and_request(
     telegram_id: int,
     request_id: int,
     session: AsyncSession | None = None,
-) -> Tuple[Optional[Client], Optional[Shipment_request]]:
+) -> Tuple[Optional[Client], Optional[ShipmentRequest]]:
     if session is None:
         async with get_session() as session:
             return await get_client_and_request(telegram_id, request_id, session)
@@ -148,7 +148,7 @@ async def get_client_and_request(
     client = await get_client_by_telegram_id(telegram_id, session=session)
 
     res_r = await session.execute(
-        select(Shipment_request).where(Shipment_request.id == request_id)
+        select(ShipmentRequest).where(ShipmentRequest.id == request_id)
     )
     req = res_r.scalar_one_or_none()
 

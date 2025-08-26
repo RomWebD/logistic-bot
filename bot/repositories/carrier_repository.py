@@ -1,25 +1,31 @@
-
-# bot/repositories/carrier_repository.py
 from bot.repositories.base import BaseRepository
-from bot.models.carrier import Carrier
-from typing import List
+from bot.models.carrier_company import CarrierCompany
+from typing import Optional, List
 from sqlalchemy import select
 
 
-class CarrierRepository(BaseRepository[Carrier]):
-    """Репозиторій для перевізників"""
+class CarrierRepository(BaseRepository[CarrierCompany]):
     
     def __init__(self, session):
-        super().__init__(Carrier, session)
+        super().__init__(session, CarrierCompany)
     
-    async def find_by_route(self, route: str) -> List[Carrier]:
-        """Знайти всіх перевізників за маршрутом"""
+    async def find_by_email(self, email: str) -> Optional[CarrierCompany]:
+        """Пошук за email"""
         result = await self.session.execute(
-            select(Carrier).where(Carrier.route.contains(route))
+            select(CarrierCompany).where(CarrierCompany.email == email)
+        )
+        return result.scalar_one_or_none()
+    
+    async def find_by_tax_id(self, tax_id: str) -> Optional[CarrierCompany]:
+        """Пошук за ЄДРПОУ/ІПН"""
+        result = await self.session.execute(
+            select(CarrierCompany).where(CarrierCompany.tax_id == tax_id)
+        )
+        return result.scalar_one_or_none()
+    
+    async def get_verified_carriers(self) -> List[CarrierCompany]:
+        """Отримати верифікованих перевізників"""
+        result = await self.session.execute(
+            select(CarrierCompany).where(CarrierCompany.is_verified == True)
         )
         return list(result.scalars().all())
-    
-    async def get_active_carriers(self) -> List[Carrier]:
-        """Отримати активних перевізників (можна додати поле is_active)"""
-        # Поки що повертаємо всіх
-        return await self.get_all()

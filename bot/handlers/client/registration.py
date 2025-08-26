@@ -19,7 +19,7 @@ async def start_client_registration(callback: CallbackQuery, state: FSMContext):
         "🧑‍💼 Почнемо реєстрацію клієнта?",
         reply_markup=InlineKeyboardMarkup(
             inline_keyboard=[
-                [InlineKeyboardButton(text="✅ Почати", callback_data="client:start")],
+                [InlineKeyboardButton(text="✅ Почати", callback_data="client:form_start")],
                 [
                     InlineKeyboardButton(
                         text="❌ Скасувати", callback_data="client:cancel"

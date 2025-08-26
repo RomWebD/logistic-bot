@@ -7,7 +7,7 @@ from aiogram.types import (
 )
 from aiogram.fsm.context import FSMContext
 
-from bot.models.TransportVehicle import TransportVehicle
+from bot.models import TransportVehicle
 from bot.services.google_services.sheets import (
     append_vehicle_to_sheet,
     create_sheet_if_not_exists,

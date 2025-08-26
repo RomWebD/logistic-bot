@@ -1,4 +1,4 @@
-from bot.models import TransportVehicle, Shipment_request
+from bot.models import TransportVehicle, ShipmentRequest
 
 
 def get_vehicle_headers() -> list[str]:
@@ -44,7 +44,7 @@ def get_request_headers() -> list[str]:
     ]
 
 
-def request_to_row(req: Shipment_request) -> list[str]:
+def request_to_row(req: ShipmentRequest) -> list[str]:
     return [
         str(req.id),
         # str(req.client_telegram_id),
