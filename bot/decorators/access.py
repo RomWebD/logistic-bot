@@ -136,26 +136,58 @@ def require_registered_client():
 
 
 def require_verified_client():
-    """
-    Декоратор перевіряє статус клієнта.
-    Якщо VERIFIED → пускає далі, інакше показує відповідь.
-    """
-
     def decorator(func):
         @wraps(func)
-        async def wrapper(event: Union[Message, CallbackQuery], *args, **kwargs):
-            session = kwargs.get("session")
-            service = ClientRegistrationService(session)
-
+        async def wrapper(
+            event: Union[Message, CallbackQuery],
+            *args,
+            **kwargs,
+        ):
             user = event.from_user
             chat_id = user.id
-            status = await service.get_status(chat_id)
+            client_repo = kwargs.get("client_repo")
+            client = await client_repo.get_by_telegram_id(chat_id)
+            # якщо клієнта немає
+            if not client:
+                # редіректимо на /start
+                if isinstance(event, CallbackQuery):
+                    await event.message.bot.delete_my_commands(
+                        scope=BotCommandScopeChat(chat_id=chat_id)
+                    )
+                    await event.message.answer(
+                        "❌ Вас не знайдено у системі. Почніть з /start."
+                    )
+                    await event.answer()
+                else:
+                    await event.bot.delete_my_commands(
+                        scope=BotCommandScopeChat(chat_id=chat_id)
+                    )
+                    await event.answer(
+                        "❌ Вас не знайдено у системі. Почніть з /start."
+                    )
+                return
+
+            # якщо є — перевіряємо статус
+            status_value = getattr(client, "status", None)
+            # якщо в БД лежить str, а в коді Enum — нормалізуємо
+            if isinstance(status_value, ClientStatus):
+                status = status_value
+            else:
+                try:
+                    status = ClientStatus(status_value)
+                except Exception:
+                    status = ClientStatus.NOT_VERIFIED
 
             if status == ClientStatus.VERIFIED:
+                # пускаємо в хендлер; ВАЖЛИВО: не передаємо client_repo/session далі,
+                # якщо хендлер їх не очікує
                 return await func(event, *args, **kwargs)
 
             if status == ClientStatus.NOT_VERIFIED:
-                msg = "⏳ Ваш профіль ще проходить верифікацію.\nСпробуйте пізніше або зверніться до адміністратора."
+                msg = (
+                    "⏳ Ваш профіль ще проходить верифікацію.\n"
+                    "Спробуйте пізніше або зверніться до адміністратора."
+                )
                 if isinstance(event, CallbackQuery):
                     await event.message.answer(
                         msg, reply_markup=client_main_kb(is_verified=False)
@@ -167,21 +199,14 @@ def require_verified_client():
                     )
                 return
 
-            # fallback, якщо NOT_REGISTERED (але сюди по ідеї не дійде,
-            # бо спрацює перший декоратор require_registered_client)
+            # fallback (на випадок інших станів)
             if isinstance(event, CallbackQuery):
-                await event.message.bot.delete_my_commands(
-                    scope=BotCommandScopeChat(chat_id=chat_id)
-                )
                 await event.message.answer(
-                    "❌ Вас не знайдено у системі. Почніть з /start."
+                    "❌ Доступ обмежено. Зверніться до підтримки."
                 )
                 await event.answer()
             else:
-                await event.bot.delete_my_commands(
-                    scope=BotCommandScopeChat(chat_id=chat_id)
-                )
-                await event.answer("❌ Вас не знайдено у системі. Почніть з /start.")
+                await event.answer("❌ Доступ обмежено. Зверніться до підтримки.")
 
         return wrapper
 

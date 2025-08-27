@@ -21,17 +21,22 @@ class OwnerType(enum.Enum):
 
 
 class SheetType(enum.Enum):
-    REQUESTS = "Заявки"  # Заявки
-    VEHICLES = "Автопарк"  # Автопарк
-    TRIPS = "Рейси"  # Рейси
+    REQUESTS = "Заявки"
+    VEHICLES = "Автопарк"
+    TRIPS = "Рейси"
+
+
+class SheetStatus(enum.Enum):
+    """Статуси Google Sheet"""
+
+    NONE = "none"  # Не створено
+    CREATING = "creating"  # Створюється
+    READY = "ready"  # Готовий
+    FAILED = "failed"  # Помилка
+    SYNCING = "syncing"  # Синхронізується
 
 
 class GoogleSheetBinding(Base):
-    """
-    Універсальна таблиця для зв'язку з Google Sheets
-    Один власник може мати кілька таблиць різних типів
-    """
-
     __tablename__ = "google_sheet_bindings"
     __table_args__ = (
         UniqueConstraint(
@@ -41,6 +46,7 @@ class GoogleSheetBinding(Base):
             name="uq_binding_owner_sheet_type",
         ),
     )
+
     id: Mapped[int] = mapped_column(primary_key=True)
 
     # Власник
@@ -49,8 +55,13 @@ class GoogleSheetBinding(Base):
     sheet_type: Mapped[SheetType] = mapped_column(Enum(SheetType))
 
     # Google Sheets
-    sheet_id: Mapped[str] = mapped_column(String(128), unique=True)
-    sheet_url: Mapped[str] = mapped_column(String(512))
+    sheet_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    sheet_url: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
+
+    # Статус
+    status: Mapped[SheetStatus] = mapped_column(
+        Enum(SheetStatus), default=SheetStatus.NONE, nullable=False
+    )
 
     # Ревізії для синхронізації
     last_revision_id: Mapped[Optional[str]] = mapped_column(String(64))
@@ -62,7 +73,6 @@ class GoogleSheetBinding(Base):
     # Синхронізація
     last_synced_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     last_synced_revision: Mapped[Optional[str]] = mapped_column(String(64))
-    sync_in_progress: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
@@ -74,6 +84,8 @@ class GoogleSheetBinding(Base):
 
     def needs_sync(self) -> bool:
         """Перевірка чи потрібна синхронізація"""
+        if self.status != SheetStatus.READY:
+            return False
         if not self.last_synced_revision:
             return True
         return self.last_synced_revision != self.last_revision_id

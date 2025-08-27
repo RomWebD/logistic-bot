@@ -8,19 +8,20 @@ from aiogram.types import (
     BotCommandScopeChat,
 )
 from aiogram.exceptions import TelegramBadRequest
-
+from bot.services.client.registration import ClientRegistrationService
 from bot.handlers.client import crud
 from bot.ui.keyboards import client_main_kb
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = Router()
 
 
 @router.callback_query(F.data == "client_check_status")
-async def handle_client_check_status(callback: CallbackQuery):
+async def handle_client_check_status(callback: CallbackQuery, session: AsyncSession):
     await callback.answer("Перевіряю статус…")
     tg_id = callback.from_user.id
-
-    client = await crud.get_client_by_telegram_id(tg_id)
+    service = ClientRegistrationService(session=session)
+    client = await service.check_existing(tg_id)
     if not client:
         # користувача немає у БД — запропонувати зареєструватись
         kb = InlineKeyboardMarkup(
@@ -35,7 +36,7 @@ async def handle_client_check_status(callback: CallbackQuery):
         )
         return
 
-    if client.is_verify:
+    if client.is_verified:
         # ✅ верифікований — оновити клавіатуру і текст
         success_text = (
             "✅ Ваш профіль верифіковано!\n"

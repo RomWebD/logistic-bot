@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from bot.forms.base import BaseForm, FormField
 from bot.database.database import get_session
-from bot.models.shipment_request import Shipment_request
+from bot.models.shipment_request import ShipmentRequest
 
 # Celery таска: забезпечити файл і дописати рядок
 from bot.services.celery.tasks import (
@@ -136,7 +136,7 @@ class ShipmentRequestForm(BaseForm):
             )
 
         async with get_session() as session:
-            req = Shipment_request(
+            req = ShipmentRequest(
                 client_telegram_id=tg_id,
                 from_city=data.get("from_city"),
                 to_city=data.get("to_city"),
@@ -155,7 +155,7 @@ class ShipmentRequestForm(BaseForm):
 
             # фонова Celery-таска: забезпечити файл і додати рядок
             # append_request_to_sheet.delay(tg_id=tg_id, request_id=req.id)
-            
+
             mgr = RequestSheetManager()
 
             check_client_sheet_revisions.delay()

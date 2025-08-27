@@ -10,8 +10,8 @@ class BaseRepository(Generic[ModelType]):
     """Базовий клас для всіх репозиторіїв"""
 
     def __init__(self, session: AsyncSession, model: Type[ModelType]):
-        self.model = model
         self.session = session
+        self.model = model
 
     async def create(self, **kwargs) -> ModelType:
         """Створити новий запис"""

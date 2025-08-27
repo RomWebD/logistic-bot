@@ -1,3 +1,4 @@
+import enum
 from sqlalchemy import select, func, update
 from bot.database.database import get_session
 from bot.handlers.client.utils import _now_utc, _parse_google_time
@@ -8,13 +9,21 @@ from aiogram.types import (
 )
 from typing import List, Optional, Tuple
 
-from bot.models import SheetStatus
-from bot.models.sheet_binding import SheetBinding, SheetKind
+# from bot.models import SheetStatus
+# from bot.models.sheet_binding import SheetBinding, SheetKind
 from bot.models import ShipmentRequest
 
 from typing import Literal
+from bot.models_old.sheet_binding import SheetBinding
 from bot.services.google_services.sheets_client import RequestSheetManager
 from sqlalchemy.ext.asyncio import AsyncSession
+
+
+class SheetStatus(str, enum.Enum):
+    PENDING = "pending"
+    READY = "ready"
+    FAILED = "failed"
+    NONE = "none"
 
 
 async def sync_requests_from_sheets(client: Client):

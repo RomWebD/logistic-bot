@@ -2,6 +2,7 @@
 from enum import Enum
 from sqlalchemy import select
 from bot.database.database import get_session
+from bot.models.client import Client
 # from bot.models import Client
 
 

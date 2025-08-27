@@ -26,6 +26,6 @@ class CarrierRepository(BaseRepository[CarrierCompany]):
     async def get_verified_carriers(self) -> List[CarrierCompany]:
         """Отримати верифікованих перевізників"""
         result = await self.session.execute(
-            select(CarrierCompany).where(CarrierCompany.is_verified == True)
+            select(CarrierCompany).where(CarrierCompany.is_verified)
         )
         return list(result.scalars().all())

@@ -6,7 +6,7 @@ from googleapiclient.errors import HttpError
 
 from googleapiclient.discovery import build
 
-from bot.models.shipment_request import Shipment_request
+from bot.models.shipment_request import ShipmentRequest
 from .auth import get_credentials
 from .utils import get_request_headers, request_to_row
 

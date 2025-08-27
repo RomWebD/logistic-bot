@@ -27,7 +27,12 @@ class ClientRepository(BaseRepository[Client]):
 
     async def get_verified_clients(self) -> List[Client]:
         """Отримати верифікованих клієнтів"""
-        result = await self.session.execute(
-            select(Client).where(Client.is_verified)
-        )
+        result = await self.session.execute(select(Client).where(Client.is_verified))
         return list(result.scalars().all())
+
+    async def get_by_telegram_id(self, telegram_id: int) -> Optional[Client]:
+        """Пошук клієнта за telegram_id"""
+        result = await self.session.execute(
+            select(Client).where(Client.telegram_id == telegram_id)
+        )
+        return result.scalar_one_or_none()

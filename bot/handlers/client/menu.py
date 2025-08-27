@@ -1,18 +1,30 @@
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, Message, CallbackQuery
+# bot/handlers/client/menu.py
+from aiogram.types import (
+    ReplyKeyboardMarkup,
+    KeyboardButton,
+    Message,
+    CallbackQuery,
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
+)
 from aiogram import Router, F
+from aiogram.fsm.context import FSMContext
+
 from bot.decorators.access import require_verified_client
 from bot.handlers.carrier_company.car_registration.fsm_helpers import (
     deactivate_inline_keyboard,
 )
-from aiogram.fsm.context import FSMContext
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from bot.handlers.client import crud
-from bot.models.client import SheetStatus
+
+from bot.repositories.client_repository import ClientRepository
+from bot.repositories.google_sheet_repository import GoogleSheetRepository
+from bot.repositories.shipment_repository import ShipmentRepository
+from bot.models.google_sheets_binding import SheetStatus, OwnerType, SheetType
+
 from bot.services.celery.task_tracker import is_sheet_job_active
-from bot.services.google_services.sheets_client import RequestSheetManager
 from bot.services.celery.tasks import ensure_client_request_sheet
 
 router = Router()
+
 client_menu_keyboard = ReplyKeyboardMarkup(
     keyboard=[
         [
@@ -34,31 +46,26 @@ async def show_client_menu(target: Message | CallbackQuery):
         "📁 Ви в головному меню клієнта.\n\n"
         "Скористайтесь кнопками нижче для створення або перегляду заявок."
     )
-
     if isinstance(target, CallbackQuery):
         await target.answer()
-
         try:
             await target.message.delete()
         except Exception:
-            pass  # якщо повідомлення вже видалено
-
+            pass
         await target.message.answer(
-            text=text,
-            reply_markup=client_menu_keyboard,
-            parse_mode="HTML",
+            text=text, reply_markup=client_menu_keyboard, parse_mode="HTML"
         )
     else:
         await target.answer(
-            text=text,
-            reply_markup=client_menu_keyboard,
-            parse_mode="HTML",
+            text=text, reply_markup=client_menu_keyboard, parse_mode="HTML"
         )
 
 
 @router.message(F.text == "/client_menu")
 @require_verified_client()
-async def handle_menu_command(message: Message, state: FSMContext):
+async def handle_menu_command(
+    message: Message, state: FSMContext, client_repo: ClientRepository
+):
     await state.clear()
     await show_client_menu(message)
 
@@ -74,14 +81,21 @@ async def handle_menu_callback(callback: CallbackQuery, state: FSMContext):
 
 @router.message(F.text == "📋 Мої заявки")
 @require_verified_client()
-async def handle_my_requests(message: Message):
+async def handle_my_requests(
+    message: Message,
+    client_repo: ClientRepository,
+    sheet_repo: GoogleSheetRepository,
+    shipment_repo: ShipmentRepository,
+):
     telegram_id = message.from_user.id
-    client = await crud.get_client_by_telegram_id(telegram_id)
+
+    client = await client_repo.get_by_telegram_id(telegram_id)
     if not client:
+        # теоретично не дійде, бо require_verified_client
         await message.answer("⛔️ Ви ще не зареєстровані як клієнт.")
         return
 
-    total = await crud.count_requests_by_telegram(telegram_id)
+    total = await shipment_repo.count_by_client(telegram_id)
     if total == 0:
         kb = InlineKeyboardMarkup(
             inline_keyboard=[
@@ -98,22 +112,24 @@ async def handle_my_requests(message: Message):
         )
         return
 
-    # 🔹 Перевірка Redis-локу
+    # Redis-лок
     if is_sheet_job_active(telegram_id):
         await message.answer(
             "⏳ Ваш Google Sheet формується, зачекайте кілька секунд..."
         )
         return
 
-    # 🔹 Перевірка статусу у БД
-    if client.sheet_status == SheetStatus.READY and client.google_sheet_url:
+    # Спроба знайти готовий binding
+    binding = await sheet_repo.get_ready_binding_by_owner_and_type(
+        telegram_id=telegram_id,
+        owner_type=OwnerType.CLIENT,
+        sheet_type=SheetType.REQUESTS,
+    )
+
+    if binding and binding.sheet_url:
         kb = InlineKeyboardMarkup(
             inline_keyboard=[
-                [
-                    InlineKeyboardButton(
-                        text="🔗 Мої заявки", url=client.google_sheet_url
-                    )
-                ],
+                [InlineKeyboardButton(text="🔗 Мої заявки", url=binding.sheet_url)],
                 [
                     InlineKeyboardButton(
                         text="✍️ Створити нову заявку",
@@ -125,13 +141,20 @@ async def handle_my_requests(message: Message):
         await message.answer("🔗 Ваші заявки:", reply_markup=kb)
         return
 
-    if client.sheet_status == SheetStatus.FAILED:
+    # Перевірка статусу (може бути FAILED / NONE / CREATING)
+    binding = await sheet_repo.get_or_create(
+        telegram_id=telegram_id,
+        owner_type=OwnerType.CLIENT,
+        sheet_type=SheetType.REQUESTS,
+    )
+
+    if binding.status == SheetStatus.FAILED:
         await message.answer(
             "⚠️ Сталася помилка при створенні Google Sheet. Спробуйте ще раз."
         )
         ensure_client_request_sheet.delay(telegram_id)
         return
 
-    # 🔹 Якщо статус NONE або URL відсутній → запускаємо створення
+    # NONE або CREATING або READY без url → запускаємо створення
     await message.answer("⏳ Формуємо ваш Google Sheet із заявками...")
     ensure_client_request_sheet.delay(telegram_id)

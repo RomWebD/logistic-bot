@@ -27,7 +27,6 @@ router = Router()
 @router.message(F.text == "🚚 Мої транспортні засоби")
 async def handle_vehicles_button(
     message: Message,
-    # КРОК 3: Отримуємо репозиторії з middleware
     carrier_repo: CarrierRepository,  # Автоматично з RepositoryMiddleware
     sheet_repo: GoogleSheetRepository,  # Теж автоматично
 ):
