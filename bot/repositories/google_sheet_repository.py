@@ -20,7 +20,7 @@ class GoogleSheetRepository(BaseRepository[GoogleSheetBinding]):
     async def get_by_telegram_id(self, telegram_id: int) -> List[GoogleSheetBinding]:
         res = await self.session.execute(
             select(GoogleSheetBinding).where(
-                GoogleSheetBinding.telegram_id == telegram_id
+                GoogleSheetBinding.telegram_id == telegram_id,
             )
         )
         return list(res.scalars().all())

@@ -13,6 +13,11 @@ from aiogram import Router, F
 from .base import BaseForm, FormField
 
 
+# ======================= get telegram_id from callback =======================
+def get_tg_id(cb: CallbackQuery, data):
+    return cb.from_user.id if data else None
+
+
 # ======================= Summary =======================
 
 
@@ -423,6 +428,8 @@ class FormRouter:
         @r.callback_query(F.data == self._cb("form_back_to_summary"))
         async def back_to_summary(cb: CallbackQuery, state: FSMContext):
             data = await state.get_data()
+            telegram_id = get_tg_id(cb, data)
+            data["tg_id"] = telegram_id
             text = build_summary_text(data, self.form)
             await cb.message.edit_text(
                 text,
@@ -435,6 +442,8 @@ class FormRouter:
         @r.callback_query(F.data == self._cb("form_save"))
         async def form_save(cb: CallbackQuery, state: FSMContext):
             data = await state.get_data()
+            telegram_id = get_tg_id(cb, data)
+            data["tg_id"] = telegram_id
             await self.form.on_submit(data, cb.message)
             await state.clear()
             await cb.message.edit_text("✅ Збережено успішно!")
@@ -442,6 +451,28 @@ class FormRouter:
 
         @r.callback_query(F.data == self._cb("form_cancel"))
         async def form_cancel(cb: CallbackQuery, state: FSMContext):
+            data = cb.data
+            prefix = data.split(":", 1)[0]
+            print(prefix)
+
             await state.clear()
             await cb.message.edit_text("🚫 Скасовано.")
+            await cb.message.answer(
+                "📝 Бажаєте створити нову заявку на перевезення?",
+                reply_markup=InlineKeyboardMarkup(
+                    inline_keyboard=[
+                        [
+                            InlineKeyboardButton(
+                                text="✅ Почати", callback_data="request:form_start"
+                            )
+                        ],
+                        [
+                            InlineKeyboardButton(
+                                text="❌ Скасувати", callback_data="request:form_cancel"
+                            )
+                        ],
+                    ]
+                ),
+            )
+            await cb.answer()
             await cb.answer()

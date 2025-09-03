@@ -24,7 +24,7 @@ async def run():
     # запускаємо бот + redis worker паралельно
     await asyncio.gather(
         bot_main(),
-        # redis_bot_consumer(),
+        redis_bot_consumer(),
     )
 
 

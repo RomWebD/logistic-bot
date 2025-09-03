@@ -1,6 +1,5 @@
 from __future__ import annotations
-from typing import Any, Dict, List
-from dataclasses import dataclass
+from typing import Any
 
 from bot.forms.base import BaseForm, FormField
 from bot.database.database import get_session
@@ -154,7 +153,7 @@ class ShipmentRequestForm(BaseForm):
             await session.refresh(req)
 
             # фонова Celery-таска: забезпечити файл і додати рядок
-            # append_request_to_sheet.delay(tg_id=tg_id, request_id=req.id)
+            append_request_to_sheet.delay(tg_id=tg_id, request_id=req.id)
 
             mgr = RequestSheetManager()
 

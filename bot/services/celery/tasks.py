@@ -86,19 +86,35 @@ def append_request_to_sheet(tg_id: int, request_id: int):
             sheet_repo = GoogleSheetRepository(session)
             shipment_repo = ShipmentRepository(session)
 
-            client = await client_repo.get_by_telegram_id(tg_id)
+            client = await client_repo.get_by_telegram_id(telegram_id=tg_id)
+            client_binding = await sheet_repo.get_by_owner_and_type(
+                telegram_id=tg_id,
+                owner_type=OwnerType.CLIENT,
+                sheet_type=SheetType.REQUESTS,
+            )
+            if not client_binding and not client:
+                await sheet_repo.create_or_update(
+                    telegram_id=tg_id,
+                    owner_type=OwnerType.CLIENT,
+                    sheet_type=SheetType.REQUESTS,
+                    sheet_id=None,
+                    sheet_url=None,
+                )
+                return
+
             req = await shipment_repo.get_request_by_id(request_id)
             if not client or not req:
                 return
-
+            google_sheet_id = client_binding.sheet_id if client_binding else None
+            google_sheet_url = client_binding.sheet_url if client_binding else None
             mgr = RequestSheetManager()
             # гарантуємо таблицю (і заодно отримуємо id/url)
             sheet_id, sheet_url = mgr.ensure_request_sheet_for_client(
                 tg_id=tg_id,
                 client_full_name=client.full_name,
                 client_email=client.email,
-                google_sheet_id=None,
-                google_sheet_url=None,
+                google_sheet_id=google_sheet_id,
+                google_sheet_url=google_sheet_url,
             )
             # оновлюємо/створюємо binding
             await sheet_repo.create_or_update(

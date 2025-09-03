@@ -1,0 +1,2 @@
+alembic revision --autogenerate -m "Change cargo descr to None"
+alembic upgrade head 
