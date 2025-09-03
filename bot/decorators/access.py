@@ -7,6 +7,9 @@ from typing import Union
 from bot.services.client.verification_client import ClientStatus, get_client_status
 from bot.ui.keyboards import client_main_kb
 
+from bot.fsm.client_registration import start_registration_flow
+from bot.services.client.registration import ClientRegistrationService
+
 
 def require_verified_carrier():
     def decorator(func):
@@ -38,65 +41,6 @@ def require_verified_carrier():
         return wrapper
 
     return decorator
-
-
-# def require_verified_client():
-#     def decorator(func):
-#         @wraps(func)
-#         async def wrapper(event: Union[Message, CallbackQuery], *args, **kwargs):
-#             user = (
-#                 event.from_user if isinstance(event, CallbackQuery) else event.from_user
-#             )
-#             chat_id = user.id
-#             status = await get_client_status(chat_id)
-
-#             if status == ClientStatus.VERIFIED:
-#                 return await func(event, *args, **kwargs)
-
-#             if status == ClientStatus.NOT_VERIFIED:
-#                 # Відповідь коректно і для Message, і для CallbackQuery
-#                 if isinstance(event, CallbackQuery):
-#                     await event.message.answer(
-#                         "⏳ Ваш профіль ще проходить верифікацію.\nСпробуйте пізніше або зверніться до адміністратора.",
-#                         reply_markup=client_main_kb(is_verified=False),
-#                     )
-#                     await event.answer()
-#                 else:
-#                     await event.answer(
-#                         "⏳ Ваш профіль ще проходить верифікацію.\nСпробуйте пізніше або зверніться до адміністратора.",
-#                         reply_markup=client_main_kb(is_verified=False),
-#                     )
-#                 return
-
-#             # NOT_REGISTERED
-#             if isinstance(event, CallbackQuery):
-#                 await event.message.bot.delete_my_commands(
-#                     scope=BotCommandScopeChat(chat_id=chat_id)
-#                 )
-#                 await event.message.answer(
-#                     "❌ Вас не знайдено у системі. Будь ласка, почніть з /start."
-#                 )
-#                 await event.answer()
-#             else:
-#                 await event.bot.delete_my_commands(
-#                     scope=BotCommandScopeChat(chat_id=chat_id)
-#                 )
-#                 await event.answer(
-#                     "❌ Вас не знайдено у системі. Будь ласка, почніть з /start."
-#                 )
-
-#         return wrapper
-
-#     return decorator
-
-from functools import wraps
-from typing import Union
-from aiogram.types import Message, CallbackQuery, BotCommandScopeChat
-
-from bot.fsm.client_registration import start_registration_flow
-from bot.services.client.registration import ClientRegistrationService
-from bot.services.client.verification_client import ClientStatus
-from bot.ui.keyboards import client_main_kb
 
 
 def require_registered_client():
@@ -144,15 +88,15 @@ def require_verified_client():
             **kwargs,
         ):
             user = event.from_user
-            chat_id = user.id
+            telegram_id = user.id
             client_repo = kwargs.get("client_repo")
-            client = await client_repo.get_by_telegram_id(chat_id)
+            client = await client_repo.get_by_telegram_id(telegram_id)
             # якщо клієнта немає
             if not client:
                 # редіректимо на /start
                 if isinstance(event, CallbackQuery):
                     await event.message.bot.delete_my_commands(
-                        scope=BotCommandScopeChat(chat_id=chat_id)
+                        scope=BotCommandScopeChat(chat_id=telegram_id)
                     )
                     await event.message.answer(
                         "❌ Вас не знайдено у системі. Почніть з /start."
@@ -160,21 +104,19 @@ def require_verified_client():
                     await event.answer()
                 else:
                     await event.bot.delete_my_commands(
-                        scope=BotCommandScopeChat(chat_id=chat_id)
+                        scope=BotCommandScopeChat(chat_id=telegram_id)
                     )
                     await event.answer(
                         "❌ Вас не знайдено у системі. Почніть з /start."
                     )
                 return
 
-            # якщо є — перевіряємо статус
-            status_value = getattr(client, "status", None)
             # якщо в БД лежить str, а в коді Enum — нормалізуємо
-            if isinstance(status_value, ClientStatus):
-                status = status_value
-            else:
+            status = await get_client_status(telegram_id)
+
+            if not status:
                 try:
-                    status = ClientStatus(status_value)
+                    status = ClientStatus(status)
                 except Exception:
                     status = ClientStatus.NOT_VERIFIED
 

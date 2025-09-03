@@ -19,6 +19,6 @@ async def get_client_status(telegram_id: int) -> ClientStatus:
         )
         if not client:
             return ClientStatus.NOT_REGISTERED
-        if client.is_verify:
+        if client.is_verified:
             return ClientStatus.VERIFIED
         return ClientStatus.NOT_VERIFIED
