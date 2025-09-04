@@ -4,7 +4,7 @@ from aiogram.types import BotCommand
 import asyncio
 import sentry_sdk
 from bot.handlers.common import role_selection  # 👈 нове
-from bot.handlers.carrier_company import registration as carrier_registration  # 👈 нове
+from bot.handlers.carrier_company import registration_old as carrier_registration  # 👈 нове
 from bot.handlers.carrier_company import menu as carrier_menu  # 👈 нове
 from bot.handlers.client import menu as client_menu  # 👈 нове
 from bot.handlers.client import registration as client_registration  # 👈 нове

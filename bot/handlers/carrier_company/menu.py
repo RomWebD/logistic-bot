@@ -12,7 +12,7 @@ from aiogram.filters import Command
 from bot.handlers.carrier_company.car_registration.fsm_helpers import (
     deactivate_inline_keyboard,
 )
-from bot.repositories.carrier_repository import CarrierRepository
+from bot.repositories.carrier_repository import CarrierCompanyRepository
 from bot.repositories.google_sheet_repository import GoogleSheetRepository
 
 # КРОК 2: Імпортуємо енами для типів
@@ -27,7 +27,7 @@ router = Router()
 @router.message(F.text == "🚚 Мої транспортні засоби")
 async def handle_vehicles_button(
     message: Message,
-    carrier_repo: CarrierRepository,  # Автоматично з RepositoryMiddleware
+    carrier_repo: CarrierCompanyRepository,  # Автоматично з RepositoryMiddleware
     sheet_repo: GoogleSheetRepository,  # Теж автоматично
 ):
     telegram_id = message.from_user.id

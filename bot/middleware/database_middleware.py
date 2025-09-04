@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 # Імпортуємо з оновленого database.py
 from bot.database.database import async_session
 from bot.repositories.client_repository import ClientRepository
-from bot.repositories.carrier_repository import CarrierRepository
+from bot.repositories.carrier_repository import CarrierCompanyRepository
 from bot.repositories.shipment_repository import ShipmentRepository
 from bot.repositories.google_sheet_repository import GoogleSheetRepository
 import logging
@@ -36,7 +36,7 @@ class RepositoryMiddleware(BaseMiddleware):
 
             # Створюємо репозиторії з цією сесією
             data["client_repo"] = ClientRepository(session)
-            data["carrier_repo"] = CarrierRepository(session)
+            data["carrier_repo"] = CarrierCompanyRepository(session)
             data["shipment_repo"] = ShipmentRepository(session)
             data["sheet_repo"] = GoogleSheetRepository(session)
 

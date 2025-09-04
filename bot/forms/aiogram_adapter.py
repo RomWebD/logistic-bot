@@ -457,22 +457,24 @@ class FormRouter:
 
             await state.clear()
             await cb.message.edit_text("🚫 Скасовано.")
-            await cb.message.answer(
-                "📝 Бажаєте створити нову заявку на перевезення?",
-                reply_markup=InlineKeyboardMarkup(
-                    inline_keyboard=[
-                        [
-                            InlineKeyboardButton(
-                                text="✅ Почати", callback_data="request:form_start"
-                            )
-                        ],
-                        [
-                            InlineKeyboardButton(
-                                text="❌ Скасувати", callback_data="request:form_cancel"
-                            )
-                        ],
-                    ]
-                ),
-            )
-            await cb.answer()
-            await cb.answer()
+            if prefix == "request":
+                await cb.message.answer(
+                    "📝 Бажаєте створити нову заявку на перевезення?",
+                    reply_markup=InlineKeyboardMarkup(
+                        inline_keyboard=[
+                            [
+                                InlineKeyboardButton(
+                                    text="✅ Почати", callback_data="request:form_start"
+                                )
+                            ],
+                            [
+                                InlineKeyboardButton(
+                                    text="❌ Скасувати",
+                                    callback_data="request:form_cancel",
+                                )
+                            ],
+                        ]
+                    ),
+                )
+                await cb.answer()
+            # await cb.answer()

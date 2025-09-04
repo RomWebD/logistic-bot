@@ -4,7 +4,7 @@
 
 from bot.services.base_service import BaseService
 from bot.repositories.shipment_repository import ShipmentRepository
-from bot.repositories.carrier_repository import CarrierRepository
+from bot.repositories.carrier_repository import CarrierCompanyRepository
 from bot.repositories.client_repository import ClientRepository
 from bot.models.shipment_request import Shipment_request
 from typing import List, Optional, Dict, Any
@@ -105,7 +105,7 @@ class ShipmentService(BaseService):
         self, carrier_telegram_id: int
     ) -> List[Shipment_request]:
         """Знайти підходящі заявки для перевізника"""
-        carrier_repo = CarrierRepository(self.session)
+        carrier_repo = CarrierCompanyRepository(self.session)
         carrier = await carrier_repo.get_by_telegram_id(carrier_telegram_id)
 
         if not carrier:

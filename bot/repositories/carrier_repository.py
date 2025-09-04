@@ -1,31 +1,29 @@
+# bot/repositories/carrier_company_repository.py
+from typing import Optional
+from sqlalchemy import select
 from bot.repositories.base import BaseRepository
 from bot.models.carrier_company import CarrierCompany
-from typing import Optional, List
-from sqlalchemy import select
 
-
-class CarrierRepository(BaseRepository[CarrierCompany]):
-    
+class CarrierCompanyRepository(BaseRepository[CarrierCompany]):
     def __init__(self, session):
         super().__init__(session, CarrierCompany)
-    
+
+    async def get_by_telegram_id(self, telegram_id: int) -> Optional[CarrierCompany]:
+        res = await self.session.execute(
+            select(CarrierCompany).where(CarrierCompany.telegram_id == telegram_id)
+        )
+        return res.scalar_one_or_none()
+
+    async def find_by_phone(self, phone: str) -> Optional[CarrierCompany]:
+        res = await self.session.execute(
+            select(CarrierCompany).where(CarrierCompany.phone == phone)
+        )
+        return res.scalar_one_or_none()
+
     async def find_by_email(self, email: str) -> Optional[CarrierCompany]:
-        """Пошук за email"""
-        result = await self.session.execute(
+        if not email:
+            return None
+        res = await self.session.execute(
             select(CarrierCompany).where(CarrierCompany.email == email)
         )
-        return result.scalar_one_or_none()
-    
-    async def find_by_tax_id(self, tax_id: str) -> Optional[CarrierCompany]:
-        """Пошук за ЄДРПОУ/ІПН"""
-        result = await self.session.execute(
-            select(CarrierCompany).where(CarrierCompany.tax_id == tax_id)
-        )
-        return result.scalar_one_or_none()
-    
-    async def get_verified_carriers(self) -> List[CarrierCompany]:
-        """Отримати верифікованих перевізників"""
-        result = await self.session.execute(
-            select(CarrierCompany).where(CarrierCompany.is_verified)
-        )
-        return list(result.scalars().all())
+        return res.scalar_one_or_none()

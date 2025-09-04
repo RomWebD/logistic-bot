@@ -1,68 +1,52 @@
+# bot/services/carrier/registration.py
+from typing import Optional, Dict, Any
+from sqlalchemy.exc import IntegrityError
+from bot.services.base_service import BaseService
+from bot.repositories.carrier_repository import CarrierCompanyRepository
 from bot.schemas.carrier.carrier import CarrierRegistrationData, CarrierResponse
-from bot.repositories.carrier_repository import CarrierRepository
-from typing import Dict, Any
+from bot.models.carrier_company import CarrierCompany
 
+class CarrierRegistrationService(BaseService[CarrierCompany]):
+    def __init__(self, session: Optional["AsyncSession"] = None):
+        super().__init__(session)
 
-class CarrierRegistrationService:
-    """Сервіс для реєстрації та управління перевізниками"""
+    @property
+    def repo(self) -> CarrierCompanyRepository:
+        return CarrierCompanyRepository(self.session)
 
-    def __init__(self, session):
-        self.session = session
-        self.repository = CarrierRepository(session)
+    async def get_by_tg(self, telegram_id: int) -> Optional[CarrierCompany]:
+        return await self.repo.get_by_telegram_id(telegram_id)
 
     async def register(self, data: CarrierRegistrationData) -> Dict[str, Any]:
-        """Реєстрація нового перевізника"""
+        try:
+            existing = await self.get_by_tg(data.telegram_id)
+            if existing:
+                return {
+                    "success": False,
+                    "code": "CARRIER_EXISTS",
+                    "message": "Ви вже зареєстровані як перевізник",
+                    "carrier": CarrierResponse.model_validate(existing).model_dump(),
+                }
 
-        # Перевірка на існування
-        existing = await self.repository.get_by_telegram_id(data.telegram_id)
-        if existing:
-            return {"success": False, "message": "Перевізник вже зареєстрований"}
+            carrier = await self.repo.create(**data.model_dump())
+            await self.session.commit()
 
-        # Перевірка унікальності email
-        if await self.repository.find_by_email(data.email):
-            return {"success": False, "message": "Email вже використовується"}
-
-        # Перевірка унікальності ЄДРПОУ
-        if await self.repository.find_by_tax_id(data.tax_id):
             return {
-                "success": False,
-                "message": "Компанія з таким ЄДРПОУ вже зареєстрована",
+                "success": True,
+                "message": "Реєстрація успішна",
+                "carrier": CarrierResponse.model_validate(carrier).model_dump(),
             }
 
-        # Створення перевізника
-        carrier = await self.repository.create(**data.model_dump())
-        await self.session.commit()
-
-        # Формуємо відповідь
-        response = CarrierResponse.model_validate(carrier)
-
-        return {
-            "success": True,
-            "carrier": response,
-            "message": "Реєстрація успішна. Очікуйте верифікації.",
-        }
-
-    async def verify(self, carrier_id: int) -> bool:
-        """Верифікація перевізника"""
-        carrier = await self.repository.get_by_id(carrier_id)
-        if not carrier:
-            return False
-
-        carrier.is_verified = True
-        await self.session.commit()
-        return True
-
-    async def update(self, telegram_id: int, data: dict) -> Dict[str, Any]:
-        """Оновлення даних перевізника"""
-        carrier = await self.repository.get_by_telegram_id(telegram_id)
-        if not carrier:
-            return {"success": False, "message": "Перевізник не знайдений"}
-
-        # Оновлюємо тільки передані поля
-        for key, value in data.items():
-            if value is not None and hasattr(carrier, key):
-                setattr(carrier, key, value)
-
-        await self.session.commit()
-
-        return {"success": True, "carrier": CarrierResponse.model_validate(carrier)}
+        except IntegrityError:
+            await self.session.rollback()
+            existing = await self.get_by_tg(data.telegram_id)
+            return {
+                "success": False,
+                "code": "CARRIER_EXISTS",
+                "message": "Ви вже зареєстровані як перевізник",
+                "carrier": CarrierResponse.model_validate(existing).model_dump() if existing else None,
+            }
+        except Exception as e:
+            await self.session.rollback()
+            await self.handle_error(e, "register_carrier")
+            return {"success": False, "code": "REGISTRATION_ERROR", "message": "Помилка реєстрації"}

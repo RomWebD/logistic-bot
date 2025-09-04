@@ -1,4 +1,4 @@
-from bot.repositories.carrier_repository import CarrierRepository
+from bot.repositories.carrier_repository import CarrierCompanyRepository
 from bot.repositories.google_sheet_repository import GoogleSheetRepository
 from bot.models.google_sheets_binding import OwnerType, SheetType
 from typing import Optional, Dict, Any
@@ -13,7 +13,7 @@ class CarrierService:
 
     def __init__(self, session: AsyncSession):
         self.session = session
-        self.carrier_repo = CarrierRepository(session)
+        self.carrier_repo = CarrierCompanyRepository(session)
         self.sheet_repo = GoogleSheetRepository(session)
 
     async def get_vehicles_sheet_url(self, telegram_id: int) -> Optional[str]:
