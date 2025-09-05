@@ -3,6 +3,9 @@ from typing import Optional
 from sqlalchemy import select
 from bot.repositories.base import BaseRepository
 from bot.models.carrier_company import CarrierCompany
+from sqlalchemy import func
+from bot.models.transport_vehicle import TransportVehicle
+
 
 class CarrierCompanyRepository(BaseRepository[CarrierCompany]):
     def __init__(self, session):
@@ -27,3 +30,9 @@ class CarrierCompanyRepository(BaseRepository[CarrierCompany]):
             select(CarrierCompany).where(CarrierCompany.email == email)
         )
         return res.scalar_one_or_none()
+
+    async def count_vehicles(self, carrier_id: int) -> int:
+        q = select(func.count(TransportVehicle.id)).where(
+            TransportVehicle.carrier_company_id == carrier_id
+        )
+        return int(await self.session.scalar(q) or 0)

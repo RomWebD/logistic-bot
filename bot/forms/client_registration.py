@@ -12,7 +12,7 @@ from bot.utils.validators import (
     validate_tax_id,
 )
 from aiogram.types import Message
-from bot.ui.keyboards import client_main_kb as get_client_main_menu
+from bot.ui.main_menu import main_menu_kb, Role
 
 
 class ClientRegistrationForm(BaseForm):
@@ -125,10 +125,7 @@ class ClientRegistrationForm(BaseForm):
 
         # Обробляємо результат
         if result["success"]:
-            await message.answer(
-                "✅ Реєстрація успішна!\n⏳ Очікуйте верифікації адміністратором.",
-                reply_markup=get_client_main_menu(is_verified=False),
-            )
+            pass
         else:
             error_messages = {
                 "CLIENT_EXISTS": "Ви вже зареєстровані",

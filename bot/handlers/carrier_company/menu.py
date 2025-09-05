@@ -9,6 +9,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.filters import Command
 
 # КРОК 1: Імпортуємо репозиторії замість CRUD
+from bot.decorators.access import require_verified
 from bot.handlers.carrier_company.car_registration.fsm_helpers import (
     deactivate_inline_keyboard,
 )
@@ -18,8 +19,9 @@ from bot.repositories.google_sheet_repository import GoogleSheetRepository
 # КРОК 2: Імпортуємо енами для типів
 from bot.models.google_sheets_binding import OwnerType, SheetType
 
-from bot.decorators.access import require_verified_carrier
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+
+from bot.ui.main_menu import Role
 
 router = Router()
 
@@ -132,14 +134,14 @@ async def show_carrier_menu(target: Message | CallbackQuery):
         )
 
 
-@router.message(Command("menu"))
-@require_verified_carrier()
+@router.message(Command("carrier_menu"))
+@require_verified(Role.CARRIER)
 async def handle_menu_command(message: Message):
     await show_carrier_menu(message)
 
 
-@router.callback_query(F.data == "menu")
-@require_verified_carrier()
+@router.callback_query(F.data == "carrier_menu")
+@require_verified(Role.CARRIER)
 async def handle_menu_callback(callback: CallbackQuery, state: FSMContext):
     await state.clear()
     await callback.answer()

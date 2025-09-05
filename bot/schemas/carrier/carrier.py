@@ -59,7 +59,7 @@ class CarrierResponse(BaseModel):
     company_name: str
     tax_id: str
     is_verified: bool
-    total_vehicles: int
+    total_vehicles: int = 0
 
     class Config:
         from_attributes = True

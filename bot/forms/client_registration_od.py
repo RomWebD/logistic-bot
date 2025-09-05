@@ -19,7 +19,7 @@ from bot.schemas.client import (
 )
 from aiogram.types import Message
 
-from bot.ui.keyboards import client_main_kb
+from bot.ui.main_menu import client_main_kb
 
 
 def _not_empty(v: Any) -> str | None:

@@ -12,7 +12,7 @@ from bot.utils.validators import (
     validate_tax_id,
 )
 from aiogram.types import Message
-from bot.ui.keyboards import client_main_kb as get_client_main_menu
+from bot.ui.main_menu import client_main_kb as get_client_main_menu
 
 
 class ClientRegistrationForm(BaseForm):

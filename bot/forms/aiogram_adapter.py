@@ -442,12 +442,20 @@ class FormRouter:
         @r.callback_query(F.data == self._cb("form_save"))
         async def form_save(cb: CallbackQuery, state: FSMContext):
             data = await state.get_data()
+            prefix = cb.data.split(":", 1)[0]
             telegram_id = get_tg_id(cb, data)
             data["tg_id"] = telegram_id
             await self.form.on_submit(data, cb.message)
             await state.clear()
-            await cb.message.edit_text("✅ Збережено успішно!")
-            await cb.answer()
+            await cb.message.edit_reply_markup(None)
+            if prefix == "request":
+                await cb.message.answer(
+                    "✅ Ви успішно створили нову заявку, очікуйте її в оновленому google sheets файлі!\n"
+                )
+                await cb.answer()
+            else:
+                await cb.message.answer("✅ Реєстрація успішна!\n")
+                await cb.answer()
 
         @r.callback_query(F.data == self._cb("form_cancel"))
         async def form_cancel(cb: CallbackQuery, state: FSMContext):
@@ -457,24 +465,24 @@ class FormRouter:
 
             await state.clear()
             await cb.message.edit_text("🚫 Скасовано.")
-            if prefix == "request":
-                await cb.message.answer(
-                    "📝 Бажаєте створити нову заявку на перевезення?",
-                    reply_markup=InlineKeyboardMarkup(
-                        inline_keyboard=[
-                            [
-                                InlineKeyboardButton(
-                                    text="✅ Почати", callback_data="request:form_start"
-                                )
-                            ],
-                            [
-                                InlineKeyboardButton(
-                                    text="❌ Скасувати",
-                                    callback_data="request:form_cancel",
-                                )
-                            ],
-                        ]
-                    ),
-                )
-                await cb.answer()
+            # if prefix == "request":
+            #     await cb.message.answer(
+            #         "📝 Бажаєте створити нову заявку на перевезення?",
+            #         reply_markup=InlineKeyboardMarkup(
+            #             inline_keyboard=[
+            #                 [
+            #                     InlineKeyboardButton(
+            #                         text="✅ Почати", callback_data="request:form_start"
+            #                     )
+            #                 ],
+            #                 [
+            #                     InlineKeyboardButton(
+            #                         text="❌ Скасувати",
+            #                         callback_data="request:form_cancel",
+            #                     )
+            #                 ],
+            #             ]
+            #         ),
+            #     )
+            #     await cb.answer()
             # await cb.answer()

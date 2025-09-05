@@ -10,7 +10,7 @@ from aiogram.types import (
 from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
 
-from bot.decorators.access import require_verified_client
+from bot.decorators.access import require_verified
 from bot.handlers.carrier_company.car_registration.fsm_helpers import (
     deactivate_inline_keyboard,
 )
@@ -22,6 +22,7 @@ from bot.models.google_sheets_binding import SheetStatus, OwnerType, SheetType
 
 from bot.services.celery.task_tracker import is_sheet_job_active
 from bot.services.celery.tasks import ensure_client_request_sheet
+from bot.ui.main_menu import Role
 
 router = Router()
 
@@ -62,7 +63,7 @@ async def show_client_menu(target: Message | CallbackQuery):
 
 
 @router.message(F.text == "/client_menu")
-@require_verified_client()
+@require_verified(Role.CLIENT)
 async def handle_menu_command(
     message: Message, state: FSMContext, client_repo: ClientRepository
 ):
@@ -71,7 +72,7 @@ async def handle_menu_command(
 
 
 @router.callback_query(F.data == "client_menu")
-@require_verified_client()
+@require_verified(Role.CLIENT)
 async def handle_menu_callback(callback: CallbackQuery, state: FSMContext):
     await state.clear()
     await callback.answer()
@@ -80,7 +81,7 @@ async def handle_menu_callback(callback: CallbackQuery, state: FSMContext):
 
 
 @router.message(F.text == "📋 Мої заявки")
-@require_verified_client()
+@require_verified(Role.CLIENT)
 async def handle_my_requests(
     message: Message,
     client_repo: ClientRepository,

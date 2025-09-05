@@ -4,12 +4,15 @@ from aiogram.types import BotCommand
 import asyncio
 import sentry_sdk
 from bot.handlers.common import role_selection  # 👈 нове
-from bot.handlers.carrier_company import registration_old as carrier_registration  # 👈 нове
+from bot.handlers.carrier_company import registration as carrier_registration  # 👈 нове
 from bot.handlers.carrier_company import menu as carrier_menu  # 👈 нове
 from bot.handlers.client import menu as client_menu  # 👈 нове
 from bot.handlers.client import registration as client_registration  # 👈 нове
 from bot.handlers.client import application  # 👈 нове
-from bot.handlers.client import verification  # 👈 нове
+
+from bot.handlers.common import check_status  # 👈 нове
+
+# from bot.handlers.client import verification  # 👈 нове
 from bot.services.bot_commands import remove_menu_for_all
 from bot.services.loader import bot
 from bot.handlers.carrier_company.car_registration import (
@@ -32,7 +35,7 @@ dp.include_router(role_selection.router)
 dp.include_router(carrier_registration.router)
 dp.include_router(carrier_menu.router)
 dp.include_router(client_registration.router)
-dp.include_router(verification.router)
+dp.include_router(check_status.router)
 dp.include_router(client_menu.router)
 dp.include_router(application.router)
 # dp.include_router(carrier_add_car.router)

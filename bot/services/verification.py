@@ -17,7 +17,7 @@ async def get_carrier_status(telegram_id: int) -> CarrierStatus:
         )
         if not carrier:
             return CarrierStatus.NOT_REGISTERED
-        if carrier.is_verify:
+        if carrier.is_verified:
             return CarrierStatus.VERIFIED
         return CarrierStatus.NOT_VERIFIED
 
@@ -27,7 +27,7 @@ async def is_verified_carrier(chat_id: int) -> bool:
         result = await session.scalar(
             select(CarrierCompany).where(
                 CarrierCompany.telegram_id == chat_id,
-                CarrierCompany.is_verify.is_(True),
+                CarrierCompany.is_verified.is_(True),
             )
         )
         return result is not None

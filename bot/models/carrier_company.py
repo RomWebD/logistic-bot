@@ -5,7 +5,6 @@ from typing import List, Optional
 from datetime import datetime
 
 
-
 class CarrierCompany(Base):
     __tablename__ = "carrier_companies"
 
@@ -45,8 +44,3 @@ class CarrierCompany(Base):
     def display_name(self) -> str:
         """Ім'я для відображення"""
         return f"{self.company_name} ({self.full_name})"
-
-    @property
-    def total_vehicles(self) -> int:
-        """Кількість транспорту"""
-        return len(self.vehicles) if self.vehicles else 0

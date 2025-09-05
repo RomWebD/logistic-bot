@@ -1,12 +1,15 @@
 # bot/forms/carrier_registration.py
 from aiogram.types import Message
 from bot.forms.base import BaseForm, FormField
-from bot.schemas.carrier import CarrierRegistrationData
+from bot.schemas.carrier.carrier import CarrierRegistrationData
 from bot.services.carrier.registration import CarrierRegistrationService
 from bot.utils.validators import (
-    validate_phone_field, normalize_phone_field,
-    validate_email, validate_tax_id,
+    validate_phone_field,
+    normalize_phone_field,
+    validate_email,
+    validate_tax_id,
 )
+
 
 class CarrierRegistrationForm(BaseForm):
     summary_header = "🚚 <b>Реєстрація перевізника:</b>"
@@ -14,7 +17,7 @@ class CarrierRegistrationForm(BaseForm):
 
     fields = [
         FormField(
-            name="contact_full_name",
+            name="full_name",
             title="Контактна особа",
             kind="text",
             prompt="👤 Введіть ПІБ контактної особи:<code>Іван Іванович</code>",
@@ -26,6 +29,9 @@ class CarrierRegistrationForm(BaseForm):
             title="Компанія / ФОП",
             kind="text",
             prompt="🏢 Назва компанії або ФОП:<code>ТОВ Інтертрейд</code>",
+            validator=lambda v: None
+            if len(v) >= 3
+            else "Назва компанії занадто коротка",
             allow_skip=False,
         ),
         FormField(
@@ -50,13 +56,13 @@ class CarrierRegistrationForm(BaseForm):
             name="email",
             title="Email",
             kind="text",
-            prompt="📧 Введіть email:<code>company@example.com</code>",
+            prompt="📧 Введіть email:<code>romangufchak@gmail.com</code>",
             validator=validate_email,
             normalizer=lambda v: v.lower().strip(),
             allow_skip=False,
         ),
         FormField(
-            name="office_address",
+            name="address",
             title="Адреса офісу",
             kind="text",
             prompt="📍 Адреса офісу:<code>Київ, вул. ...</code>",
@@ -90,12 +96,12 @@ class CarrierRegistrationForm(BaseForm):
         try:
             dto = CarrierRegistrationData(
                 telegram_id=telegram_id,
-                contact_full_name=data["contact_full_name"],
+                full_name=data["full_name"],
                 company_name=data["company_name"],
                 tax_id=data["tax_id"],
                 phone=data["phone"],
                 email=data["email"],
-                office_address=data["office_address"],
+                address=data["address"],
                 website=data.get("website"),
             )
         except Exception as e:
@@ -111,13 +117,13 @@ class CarrierRegistrationForm(BaseForm):
             result = await svc.register(dto)
 
         if result["success"]:
-            await message.answer(
-                "✅ Реєстрація успішна!\n⏳ Очікуйте верифікації адміністратором."
-            )
+            pass
         else:
             errors = {
                 "CARRIER_EXISTS": "Ви вже зареєстровані як перевізник",
                 "REGISTRATION_ERROR": "Технічна помилка, спробуйте пізніше",
             }
-            msg = errors.get(result.get("code"), result.get("message", "Невідома помилка"))
+            msg = errors.get(
+                result.get("code"), result.get("message", "Невідома помилка")
+            )
             await message.answer(f"❌ {msg}")
